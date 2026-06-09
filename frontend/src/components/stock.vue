@@ -2265,62 +2265,64 @@ watch(modalShow6, (newVal) => {
                 </n-text>
               </n-gi>
             </n-grid>
-            <n-grid :cols="2" :y-gap="4" :x-gap="4">
-              <n-gi>
-                <n-text :type="'info'">{{ "最高 " + result["今日最高价"] + " " + result.highRate }}%</n-text>
-              </n-gi>
-              <n-gi>
-                <n-text :type="'info'">{{ "最低 " + result["今日最低价"] + " " + result.lowRate }}%</n-text>
-              </n-gi>
+            <n-grid :cols="3" :y-gap="4" :x-gap="4">
               <n-gi>
                 <n-text :type="'info'">{{ "昨收 " + result["昨日收盘价"] }}</n-text>
               </n-gi>
               <n-gi>
+                <n-text :type="result.changePercent > 0 ? 'error' : (result.changePercent < 0 ? 'success' : 'info')">{{ "买一 " + result["买一报价"] + '(' + result["买一申报"] + ")" }}</n-text>
+              </n-gi>
+              <n-gi>
+                <n-text :type="Number(result['今日最高价']) > Number(result['昨日收盘价']) ? 'error' : (Number(result['今日最高价']) < Number(result['昨日收盘价']) ? 'success' : 'info')">{{ "最高 " + result["今日最高价"] + " " + result.highRate }}%</n-text>
+              </n-gi>
+              <n-gi>
                 <n-text :type="'info'">{{ "今开 " + result["今日开盘价"] }}</n-text>
+              </n-gi>
+              <n-gi>
+                <n-text :type="result.changePercent > 0 ? 'error' : (result.changePercent < 0 ? 'success' : 'info')">{{ "卖一 " + result["卖一报价"] + '(' + result["卖一申报"] + ")" }}</n-text>
+              </n-gi>
+              <n-gi>
+                <n-text :type="Number(result['今日最低价']) < Number(result['昨日收盘价']) ? 'success' : (Number(result['今日最低价']) > Number(result['昨日收盘价']) ? 'error' : 'info')">{{ "最低 " + result["今日最低价"] + " " + result.lowRate }}%</n-text>
               </n-gi>
             </n-grid>
             <n-collapse accordion v-if="result['买一报价']>0">
               <n-collapse-item title="盘口" name="1" v-if="result['买一报价']>0">
                 <template #header-extra>
-                  <n-flex justify="space-between">
-                    <n-text :type="'info'">{{ "买一 " + result["买一报价"] + '(' + result["买一申报"] + ")" }}</n-text>
-                    <n-text :type="'info'">{{ "卖一 " + result["卖一报价"] + '(' + result["卖一申报"] + ")" }}</n-text>
-                  </n-flex>
                 </template>
                 <n-grid :cols="2" :y-gap="4" :x-gap="4">
                   <n-gi v-if="result['买一报价']>0">
-                    <n-text :type="'info'">{{ "买一 " + result["买一报价"] + '(' + result["买一申报"] + ")" }}</n-text>
+                    <n-text :type="result.changePercent > 0 ? 'error' : (result.changePercent < 0 ? 'success' : 'info')">{{ "买一 " + result["买一报价"] + '(' + result["买一申报"] + ")" }}</n-text>
                   </n-gi>
                   <n-gi v-if="result['卖一报价']>0">
-                    <n-text :type="'info'">{{ "卖一 " + result["卖一报价"] + '(' + result["卖一申报"] + ")" }}</n-text>
+                    <n-text :type="result.changePercent > 0 ? 'error' : (result.changePercent < 0 ? 'success' : 'info')">{{ "卖一 " + result["卖一报价"] + '(' + result["卖一申报"] + ")" }}</n-text>
                   </n-gi>
 
                   <n-gi v-if="result['买二报价']>0">
-                    <n-text :type="'info'">{{ "买二 " + result["买二报价"] + '(' + result["买二申报"] + ")" }}</n-text>
+                    <n-text :type="result.changePercent > 0 ? 'error' : (result.changePercent < 0 ? 'success' : 'info')">{{ "买二 " + result["买二报价"] + '(' + result["买二申报"] + ")" }}</n-text>
                   </n-gi>
                   <n-gi v-if="result['卖二报价']>0">
-                    <n-text :type="'info'">{{ "卖二 " + result["卖二报价"] + '(' + result["卖二申报"] + ")" }}</n-text>
+                    <n-text :type="result.changePercent > 0 ? 'error' : (result.changePercent < 0 ? 'success' : 'info')">{{ "卖二 " + result["卖二报价"] + '(' + result["卖二申报"] + ")" }}</n-text>
                   </n-gi>
 
                   <n-gi v-if="result['买三报价']>0">
-                    <n-text :type="'info'">{{ "买三 " + result["买三报价"] + '(' + result["买三申报"] + ")" }}</n-text>
+                    <n-text :type="result.changePercent > 0 ? 'error' : (result.changePercent < 0 ? 'success' : 'info')">{{ "买三 " + result["买三报价"] + '(' + result["买三申报"] + ")" }}</n-text>
                   </n-gi>
                   <n-gi v-if="result['卖三报价']>0">
-                    <n-text :type="'info'">{{ "买三 " + result["卖三报价"] + '(' + result["卖三申报"] + ")" }}</n-text>
+                    <n-text :type="result.changePercent > 0 ? 'error' : (result.changePercent < 0 ? 'success' : 'info')">{{ "卖三 " + result["卖三报价"] + '(' + result["卖三申报"] + ")" }}</n-text>
                   </n-gi>
 
                   <n-gi v-if="result['买四报价']>0">
-                    <n-text :type="'info'">{{ "买四 " + result["买四报价"] + '(' + result["买四申报"] + ")" }}</n-text>
+                    <n-text :type="result.changePercent > 0 ? 'error' : (result.changePercent < 0 ? 'success' : 'info')">{{ "买四 " + result["买四报价"] + '(' + result["买四申报"] + ")" }}</n-text>
                   </n-gi>
                   <n-gi v-if="result['卖四报价']>0">
-                    <n-text :type="'info'">{{ "卖四 " + result["卖四报价"] + '(' + result["卖四申报"] + ")" }}</n-text>
+                    <n-text :type="result.changePercent > 0 ? 'error' : (result.changePercent < 0 ? 'success' : 'info')">{{ "卖四 " + result["卖四报价"] + '(' + result["卖四申报"] + ")" }}</n-text>
                   </n-gi>
 
                   <n-gi v-if="result['买五报价']>0">
-                    <n-text :type="'info'">{{ "买五 " + result["买五报价"] + '(' + result["买五申报"] + ")" }}</n-text>
+                    <n-text :type="result.changePercent > 0 ? 'error' : (result.changePercent < 0 ? 'success' : 'info')">{{ "买五 " + result["买五报价"] + '(' + result["买五申报"] + ")" }}</n-text>
                   </n-gi>
                   <n-gi v-if="result['卖五报价']>0">
-                    <n-text :type="'info'">{{ "卖五 " + result["卖五报价"] + '(' + result["卖五申报"] + ")" }}</n-text>
+                    <n-text :type="result.changePercent > 0 ? 'error' : (result.changePercent < 0 ? 'success' : 'info')">{{ "卖五 " + result["卖五报价"] + '(' + result["卖五申报"] + ")" }}</n-text>
                   </n-gi>
                 </n-grid>
               </n-collapse-item>
@@ -2350,20 +2352,13 @@ watch(modalShow6, (newVal) => {
                   </n-tag>
                 </n-flex>
                 <n-flex justify="center">
-                  <n-text 
-                    size="small" 
-                    :type="result.remark ? 'success' : 'info'"
+                  <n-text
+                    size="small"
                     @dblclick="editRemark(result['股票代码'], result.remark)"
-                    style="cursor: pointer; min-width: 40px; text-align: center;"
+                    style="cursor: pointer; min-width: 40px; text-align: center; color: #2080f0;"
                   >
                     {{ result.remark || '备注' }}
                   </n-text>
-                </n-flex>
-                <n-flex justify="center">
-                  <n-button size="tiny" type="primary" secondary
-                            @click="showLightweightKline(result['股票代码'],result['股票名称'])">
-                    多周期K线
-                  </n-button>
                 </n-flex>
               </n-flex>
             </template>
@@ -2391,6 +2386,10 @@ watch(modalShow6, (newVal) => {
                               @select="(groupId) => AddStockGroupInfo(groupId,result['股票代码'],result['股票名称'])">
                     <n-button type="warning" size="tiny">设置分组</n-button>
                   </n-dropdown>
+                  <n-button size="tiny" type="primary" secondary
+                            @click="showLightweightKline(result['股票代码'],result['股票名称'])">
+                    多周期K线
+                  </n-button>
                 </n-flex>
               </n-flex>
             </template>
@@ -2426,62 +2425,64 @@ watch(modalShow6, (newVal) => {
                                   :stock-code="result['股票代码']" :stock-name="result['股票名称']"></stock-spark-line>
               </n-gi>
             </n-grid>
-            <n-grid :cols="2" :y-gap="4" :x-gap="4">
-              <n-gi>
-                <n-text :type="'info'">{{ "最高 " + result["今日最高价"] + " " + result.highRate }}%</n-text>
-              </n-gi>
-              <n-gi>
-                <n-text :type="'info'">{{ "最低 " + result["今日最低价"] + " " + result.lowRate }}%</n-text>
-              </n-gi>
+            <n-grid :cols="3" :y-gap="4" :x-gap="4">
               <n-gi>
                 <n-text :type="'info'">{{ "昨收 " + result["昨日收盘价"] }}</n-text>
               </n-gi>
               <n-gi>
+                <n-text :type="result.changePercent > 0 ? 'error' : (result.changePercent < 0 ? 'success' : 'info')">{{ "买一 " + result["买一报价"] + '(' + result["买一申报"] + ")" }}</n-text>
+              </n-gi>
+              <n-gi>
+                <n-text :type="Number(result['今日最高价']) > Number(result['昨日收盘价']) ? 'error' : (Number(result['今日最高价']) < Number(result['昨日收盘价']) ? 'success' : 'info')">{{ "最高 " + result["今日最高价"] + " " + result.highRate }}%</n-text>
+              </n-gi>
+              <n-gi>
                 <n-text :type="'info'">{{ "今开 " + result["今日开盘价"] }}</n-text>
+              </n-gi>
+              <n-gi>
+                <n-text :type="result.changePercent > 0 ? 'error' : (result.changePercent < 0 ? 'success' : 'info')">{{ "卖一 " + result["卖一报价"] + '(' + result["卖一申报"] + ")" }}</n-text>
+              </n-gi>
+              <n-gi>
+                <n-text :type="Number(result['今日最低价']) < Number(result['昨日收盘价']) ? 'success' : (Number(result['今日最低价']) > Number(result['昨日收盘价']) ? 'error' : 'info')">{{ "最低 " + result["今日最低价"] + " " + result.lowRate }}%</n-text>
               </n-gi>
             </n-grid>
             <n-collapse accordion v-if="result['买一报价']>0">
               <n-collapse-item title="盘口" name="1" v-if="result['买一报价']>0">
                 <template #header-extra>
-                  <n-flex justify="space-between">
-                    <n-text :type="'info'">{{ "买一 " + result["买一报价"] + '(' + result["买一申报"] + ")" }}</n-text>
-                    <n-text :type="'info'">{{ "卖一 " + result["卖一报价"] + '(' + result["卖一申报"] + ")" }}</n-text>
-                  </n-flex>
                 </template>
                 <n-grid :cols="2" :y-gap="4" :x-gap="4">
                   <n-gi v-if="result['买一报价']>0">
-                    <n-text :type="'info'">{{ "买一 " + result["买一报价"] + '(' + result["买一申报"] + ")" }}</n-text>
+                    <n-text :type="result.changePercent > 0 ? 'error' : (result.changePercent < 0 ? 'success' : 'info')">{{ "买一 " + result["买一报价"] + '(' + result["买一申报"] + ")" }}</n-text>
                   </n-gi>
                   <n-gi v-if="result['卖一报价']>0">
-                    <n-text :type="'info'">{{ "卖一 " + result["卖一报价"] + '(' + result["卖一申报"] + ")" }}</n-text>
+                    <n-text :type="result.changePercent > 0 ? 'error' : (result.changePercent < 0 ? 'success' : 'info')">{{ "卖一 " + result["卖一报价"] + '(' + result["卖一申报"] + ")" }}</n-text>
                   </n-gi>
 
                   <n-gi v-if="result['买二报价']>0">
-                    <n-text :type="'info'">{{ "买二 " + result["买二报价"] + '(' + result["买二申报"] + ")" }}</n-text>
+                    <n-text :type="result.changePercent > 0 ? 'error' : (result.changePercent < 0 ? 'success' : 'info')">{{ "买二 " + result["买二报价"] + '(' + result["买二申报"] + ")" }}</n-text>
                   </n-gi>
                   <n-gi v-if="result['卖二报价']>0">
-                    <n-text :type="'info'">{{ "卖二 " + result["卖二报价"] + '(' + result["卖二申报"] + ")" }}</n-text>
+                    <n-text :type="result.changePercent > 0 ? 'error' : (result.changePercent < 0 ? 'success' : 'info')">{{ "卖二 " + result["卖二报价"] + '(' + result["卖二申报"] + ")" }}</n-text>
                   </n-gi>
 
                   <n-gi v-if="result['买三报价']>0">
-                    <n-text :type="'info'">{{ "买三 " + result["买三报价"] + '(' + result["买三申报"] + ")" }}</n-text>
+                    <n-text :type="result.changePercent > 0 ? 'error' : (result.changePercent < 0 ? 'success' : 'info')">{{ "买三 " + result["买三报价"] + '(' + result["买三申报"] + ")" }}</n-text>
                   </n-gi>
                   <n-gi v-if="result['卖三报价']>0">
-                    <n-text :type="'info'">{{ "买三 " + result["卖三报价"] + '(' + result["卖三申报"] + ")" }}</n-text>
+                    <n-text :type="result.changePercent > 0 ? 'error' : (result.changePercent < 0 ? 'success' : 'info')">{{ "卖三 " + result["卖三报价"] + '(' + result["卖三申报"] + ")" }}</n-text>
                   </n-gi>
 
                   <n-gi v-if="result['买四报价']>0">
-                    <n-text :type="'info'">{{ "买四 " + result["买四报价"] + '(' + result["买四申报"] + ")" }}</n-text>
+                    <n-text :type="result.changePercent > 0 ? 'error' : (result.changePercent < 0 ? 'success' : 'info')">{{ "买四 " + result["买四报价"] + '(' + result["买四申报"] + ")" }}</n-text>
                   </n-gi>
                   <n-gi v-if="result['卖四报价']>0">
-                    <n-text :type="'info'">{{ "卖四 " + result["卖四报价"] + '(' + result["卖四申报"] + ")" }}</n-text>
+                    <n-text :type="result.changePercent > 0 ? 'error' : (result.changePercent < 0 ? 'success' : 'info')">{{ "卖四 " + result["卖四报价"] + '(' + result["卖四申报"] + ")" }}</n-text>
                   </n-gi>
 
                   <n-gi v-if="result['买五报价']>0">
-                    <n-text :type="'info'">{{ "买五 " + result["买五报价"] + '(' + result["买五申报"] + ")" }}</n-text>
+                    <n-text :type="result.changePercent > 0 ? 'error' : (result.changePercent < 0 ? 'success' : 'info')">{{ "买五 " + result["买五报价"] + '(' + result["买五申报"] + ")" }}</n-text>
                   </n-gi>
                   <n-gi v-if="result['卖五报价']>0">
-                    <n-text :type="'info'">{{ "卖五 " + result["卖五报价"] + '(' + result["卖五申报"] + ")" }}</n-text>
+                    <n-text :type="result.changePercent > 0 ? 'error' : (result.changePercent < 0 ? 'success' : 'info')">{{ "卖五 " + result["卖五报价"] + '(' + result["卖五申报"] + ")" }}</n-text>
                   </n-gi>
                 </n-grid>
               </n-collapse-item>
@@ -2514,20 +2515,13 @@ watch(modalShow6, (newVal) => {
                   </n-tag>
                 </n-flex>
                 <n-flex justify="center">
-                  <n-text 
-                    size="small" 
-                    :type="result.remark ? 'success' : 'info'"
+                  <n-text
+                    size="small"
                     @dblclick="editRemark(result['股票代码'], result.remark)"
-                    style="cursor: pointer; min-width: 40px; text-align: center;"
+                    style="cursor: pointer; min-width: 40px; text-align: center; color: #2080f0;"
                   >
                     {{ result.remark || '备注' }}
                   </n-text>
-                </n-flex>
-                <n-flex justify="center">
-                  <n-button size="tiny" type="primary" secondary
-                            @click="showLightweightKline(result['股票代码'],result['股票名称'])">
-                    多周期K线
-                  </n-button>
                 </n-flex>
               </n-flex>
             </template>
@@ -2555,6 +2549,10 @@ watch(modalShow6, (newVal) => {
                               @select="(groupId) => AddStockGroupInfo(groupId,result['股票代码'],result['股票名称'])">
                     <n-button type="warning" size="tiny">设置分组</n-button>
                   </n-dropdown>
+                  <n-button size="tiny" type="primary" secondary
+                            @click="showLightweightKline(result['股票代码'],result['股票名称'])">
+                    多周期K线
+                  </n-button>
                 </n-flex>
               </n-flex>
             </template>
@@ -2718,13 +2716,13 @@ watch(modalShow6, (newVal) => {
     <!--    <n-image :src="data.fenshiURL" />-->
     <div ref="kLineChartRef2" style="width: 100%; height: 500px;"></div>
   </n-modal>
-  <n-modal v-model:show="modalShow3" :title="data.name" style="width: 1000px;max-width: calc(100vw - 32px);" :preset="'card'"
+  <n-modal v-model:show="modalShow3" :title="data.name" style="width: max(30%, 400px);max-width: calc(100vw - 32px);" :preset="'card'"
            @after-enter="handleKLine">
     <!--    <n-image :src="data.kURL" />-->
     <div ref="kLineChartRef" style="width: 100%; height: 500px;"></div>
   </n-modal>
 
-  <n-modal transform-origin="center" v-model:show="modalShow4" preset="card" style="width: 800px;max-width: calc(100vw - 32px);"
+  <n-modal transform-origin="center" v-model:show="modalShow4" preset="card" style="width: max(30%, 400px);max-width: calc(100vw - 32px);"
            :title="'['+data.name+']AI分析'">
     <n-spin size="small" :show="data.loading">
       <MdEditor v-if="enableEditor" :toolbars="toolbars" ref="mdEditorRef" style="height: 440px;max-height: 60vh;text-align: left"
