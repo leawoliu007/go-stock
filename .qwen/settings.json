@@ -5,7 +5,10 @@
       "Bash(go *)",
       "Bash(npm run *)",
       "Bash(git checkout *)",
-      "Bash(wails *)"
+      "Bash(wails *)",
+      "Bash(type *)",
+      "Bash(findstr *)",
+      "Bash(python *)"
     ]
   },
   "$version": 4

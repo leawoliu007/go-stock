@@ -1,25 +1,67 @@
 <script setup>
-import {h, onBeforeMount, onBeforeUnmount, onMounted, reactive, ref, computed} from "vue";
+import {computed, h, nextTick, onBeforeMount, onBeforeUnmount, onMounted, reactive, ref} from "vue";
 import {Add, ChatboxOutline, RefreshOutline} from "@vicons/ionicons5";
-import {NButton, NEllipsis, NText, useMessage, NTag, NModal, NDataTable, NPopover, NIcon} from "naive-ui";
 import {
+  NAvatar,
+  NButton,
+  NFlex,
+  NForm,
+  NFormItem,
+  NGradientText,
+  NInput,
+  NInputNumber,
+  NModal,
+  NSpin,
+  NSwitch,
+  NSelect,
+  NText,
+  useDialog,
+  useMessage,
+  useNotification
+} from 'naive-ui';
+import {
+  Environment,
+  EventsEmit,
+  EventsOff,
+  EventsOn,
+  WindowFullscreen,
+  WindowReload,
+  WindowUnfullscreen
+} from "../../wailsjs/runtime";
+import {
+  AddGroup,
   FollowFund,
+  GetAiConfigs,
+  GetAIResponseResult,
   GetConfig,
   GetFollowedFundPaged,
-  GetfundList,
-  GetVersionInfo,
-  OpenURL,
-  UnFollowFund,
   GetFundHistoryNetValue,
-  GetFundTop10Holdings
+  GetFundTop10Holdings,
+  GetfundList,
+  GetPromptTemplates,
+  GetVersionInfo,
+  NewChatStream,
+  OpenURL,
+  SaveAIResponseResult,
+  SaveAsMarkdown,
+  SaveImage,
+  SaveWordFile,
+  ShareAnalysis,
+  UnFollowFund
 } from "../../wailsjs/go/main/App";
-import {Environment} from "../../wailsjs/runtime";
+import {MdEditor, MdPreview} from 'md-editor-v3';
+import {ExportPDF} from '@vavt/v3-extension';
+import '@vavt/v3-extension/lib/asset/ExportPDF.css';
+import html2canvas from "html2canvas";
+import {asBlob} from 'html-docx-js-typescript';
 import vueDanmaku from 'vue3-danmaku'
 import FundKlineChart from "./FundKlineChart.vue";
 
 const danmus = ref([])
 const ws = ref(null)
 const icon = ref(null)
+const dialog = useDialog()
+const notify = useNotification()
 const message = useMessage()
 const chartModalShow = ref(false)
 const chartFundCode = ref('')
@@ -29,10 +71,27 @@ const netValueLoading = ref(false)
 const darkTheme = ref(false)
 const showPopover = ref(false)
 const holdingsMap = reactive({})
+const modalShow4 = ref(false)
+const toolbars = [0]
+const handleProgress = (progress) => {}
+const enableEditor = ref(false)
+const mdPreviewRef = ref(null)
+const mdEditorRef = ref(null)
+const aiResultScrollRef = ref(null)
+const tipsRef = ref(null)
+const enableTools = ref(true)
+const thinkingMode = ref(true)
+const promptTemplates = ref([])
+const aiConfigs = ref([])
+const sysPromptOptions = ref([])
+const userPromptOptions = ref([])
+
 const data = reactive({
   modelName: "",
   chatId: "",
   question: "",
+  sysPromptId: null,
+  aiConfigId: 0,
   name: "",
   code: "",
   fullscreen: false,
@@ -40,6 +99,8 @@ const data = reactive({
   openAiEnable: false,
   loading: true,
   enableDanmu: false,
+  changePercent: 0,
+  time: ""
 })
 
 const followList = ref([])
@@ -126,6 +187,17 @@ onBeforeMount(() => {
     if (result.enableDanmu) data.enableDanmu = true
     if (result.darkTheme) darkTheme.value = true
   })
+  GetPromptTemplates("", "").then(res => {
+    promptTemplates.value = res
+    sysPromptOptions.value = promptTemplates.value.filter(item => item.type === '模型系统 Prompt')
+    userPromptOptions.value = promptTemplates.value.filter(item => item.type === '模型用户 Prompt')
+  }).catch(err => { console.error("GetPromptTemplates error:", err) })
+  GetAiConfigs().then(res => {
+    aiConfigs.value = res
+    if (res && res.length > 0) {
+      data.aiConfigId = res[0].ID
+    }
+  }).catch(err => { console.error("GetAiConfigs error:", err) })
   loadFollowedFunds()
 })
 
@@ -151,6 +223,39 @@ onMounted(() => {
       countdown.value--
     }
   }, 1000)
+
+  EventsOn("newChatStream", async (msg) => {
+    if (msg === "DONE") {
+      SaveAIResponseResult(data.code, data.name, data.airesult, data.chatId, data.question, data.aiConfigId)
+      message.info("AI 分析完成！")
+      message.destroyAll()
+      data.loading = false
+    } else {
+      if (msg.chatId) {
+        data.chatId = msg.chatId
+      }
+      if (msg.question) {
+        data.question = msg.question
+      }
+      if (msg.content || msg.reasoning_content || msg.extraContent) {
+        data.loading = false
+      }
+      if (msg.content && typeof msg.content === 'string') {
+        data.airesult = data.airesult + msg.content;
+      }
+      if (msg.reasoning_content && typeof msg.reasoning_content === 'string') {
+        data.airesult = data.airesult + msg.reasoning_content;
+      }
+      if (msg.extraContent && typeof msg.extraContent === 'string') {
+        data.airesult = data.airesult + msg.extraContent;
+      }
+      nextTick(() => {
+        if (aiResultScrollRef.value) {
+          aiResultScrollRef.value.scrollTop = aiResultScrollRef.value.scrollHeight
+        }
+      })
+    }
+  })
 })
 
 onBeforeUnmount(() => {
@@ -158,6 +263,8 @@ onBeforeUnmount(() => {
   clearInterval(countdownTimer.value)
   if (ws.value) ws.value.close()
   message.destroyAll()
+  notify.destroyAll()
+  EventsOff("newChatStream")
 })
 
 function refreshAllFunds() {
@@ -315,6 +422,220 @@ function blinkBorder(findId) {
     }
   }
 }
+
+function aiReCheckFund(fund, fundCode) {
+  data.modelName = ""
+  data.airesult = ""
+  data.time = ""
+  data.name = fund
+  data.code = fundCode
+  data.loading = true
+  modalShow4.value = true
+  message.loading("ai 检测中...", {
+    duration: 0,
+  })
+  NewChatStream(fund, fundCode, data.question, data.aiConfigId, data.sysPromptId, enableTools.value, thinkingMode.value)
+}
+
+function aiCheckFund(fund, fundCode) {
+  GetAIResponseResult(fundCode).then(result => {
+    if (result.content) {
+      data.modelName = result.modelName
+      data.chatId = result.chatId
+      data.question = result.question
+      data.name = fund
+      data.code = fundCode
+      data.loading = false
+      modalShow4.value = true
+      data.airesult = result.content
+      const date = new Date(result.CreatedAt);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+      data.time = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+    } else {
+      data.modelName = ""
+      data.question = ""
+      data.airesult = ""
+      data.time = ""
+      data.name = fund
+      data.code = fundCode
+      data.loading = false
+      modalShow4.value = true
+    }
+  })
+}
+
+function scrollToAiResultBottom() {
+  nextTick(() => {
+    requestAnimationFrame(() => {
+      const el = aiResultScrollRef.value
+      if (el) {
+        el.scrollTop = el.scrollHeight
+      }
+    })
+  })
+}
+
+function saveAsImage(name, code) {
+  const previewEl = mdPreviewRef.value?.$el || mdEditorRef.value?.$el
+  const element = previewEl?.querySelector('.md-editor-preview-wrapper') ||
+                  previewEl?.querySelector('.md-editor-preview') ||
+                  document.querySelector('.md-editor-preview')
+  if (!element) {
+    message.error('无法找到分析结果元素')
+    return
+  }
+  const savedStyles = []
+  let el = element.parentElement
+  while (el && el !== document.body) {
+    const style = getComputedStyle(el)
+    if (style.overflow === 'hidden' || style.overflowY === 'hidden' || style.overflowY === 'auto' || style.overflowY === 'scroll') {
+      savedStyles.push({ el, overflow: el.style.overflow, overflowY: el.style.overflowY, height: el.style.height, maxHeight: el.style.maxHeight })
+      el.style.overflow = 'visible'
+      el.style.overflowY = 'visible'
+      el.style.height = 'auto'
+      el.style.maxHeight = 'none'
+    }
+    el = el.parentElement
+  }
+  const savedTargetStyle = { height: element.style.height, maxHeight: element.style.maxHeight, overflow: element.style.overflow, overflowY: element.style.overflowY }
+  element.style.height = 'auto'
+  element.style.maxHeight = 'none'
+  element.style.overflow = 'visible'
+  element.style.overflowY = 'visible'
+  nextTick(async () => {
+    const isDark = document.documentElement.getAttribute('theme-mode') === 'dark'
+    try {
+      const canvas = await html2canvas(element, {
+        useCORS: true,
+        scale: 2,
+        allowTaint: true,
+        logging: false,
+        backgroundColor: isDark ? '#1e1e1e' : '#ffffff'
+      })
+      element.style.height = savedTargetStyle.height
+      element.style.maxHeight = savedTargetStyle.maxHeight
+      element.style.overflow = savedTargetStyle.overflow
+      element.style.overflowY = savedTargetStyle.overflowY
+      savedStyles.forEach(({ el, overflow, overflowY, height, maxHeight }) => {
+        el.style.overflow = overflow
+        el.style.overflowY = overflowY
+        el.style.height = height
+        el.style.maxHeight = maxHeight
+      })
+      const dataUrl = canvas.toDataURL('image/png')
+      const base64 = dataUrl.replace(/^data:image\/png;base64,/, '')
+      const result = await SaveImage(name + '[' + code + ']AI 分析', base64)
+      if (result && !result.includes('异常') && !result.includes('无法')) {
+        message.success('已导出为 PNG 图片：' + result)
+      } else {
+        message.info(result || '导出取消')
+      }
+    } catch (e) {
+      element.style.height = savedTargetStyle.height
+      element.style.maxHeight = savedTargetStyle.maxHeight
+      element.style.overflow = savedTargetStyle.overflow
+      element.style.overflowY = savedTargetStyle.overflowY
+      savedStyles.forEach(({ el, overflow, overflowY, height, maxHeight }) => {
+        el.style.overflow = overflow
+        el.style.overflowY = overflowY
+        el.style.height = height
+        el.style.maxHeight = maxHeight
+      })
+      message.error('导出图片失败：' + (e?.message ?? e))
+    }
+  })
+}
+
+async function copyToClipboard() {
+  try {
+    await navigator.clipboard.writeText(data.airesult);
+    message.success('分析结果已复制到剪切板');
+  } catch (err) {
+    message.error('复制失败：' + err);
+  }
+}
+
+function saveAsMarkdown() {
+  SaveAsMarkdown(data.code, data.name).then(result => {
+    message.success(result)
+  })
+}
+
+function getHtml(ref) {
+  if (ref.value) {
+    const rootElement = ref.value.$el;
+    return rootElement.innerHTML;
+  } else {
+    console.error('ref is not yet available');
+    return "";
+  }
+}
+
+async function saveAsWord() {
+  const html = getHtml(mdPreviewRef)
+  const tipsHtml = getHtml(tipsRef)
+  const value = `
+         ${html}
+         <hr>
+         <div style="font-size: 12px;color: red">
+         ${tipsHtml}
+          </div>
+<br>
+本报告由 go-stock 项目生成：
+<p>
+<a href="https://github.com/ArvinLovegood/go-stock">
+AI 赋能股票分析：自选股行情获取，成本盈亏展示，涨跌报警推送，市场整体/个股情绪分析，K 线技术指标分析等。数据全部保留在本地。支持 DeepSeek，OpenAI，Ollama，LMStudio，AnythingLLM，硅基流动，火山方舟，阿里云百炼等平台或模型。
+</a></p>
+`
+  const blob = await asBlob(value, {orientation: 'portrait'})
+  const {platform} = await Environment()
+  switch (platform) {
+    case 'windows':
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(blob)
+      a.download = `${data.name}[${data.code}]-ai-analysis-result.docx`;
+      a.click()
+      URL.revokeObjectURL(a.href);
+      a.remove()
+      break
+    default:
+      const arrayBuffer = await blob.arrayBuffer()
+      const uint8Array = new Uint8Array(arrayBuffer)
+      const binary = uint8Array.reduce((data, byte) => data + String.fromCharCode(byte), '')
+      const base64 = btoa(binary)
+      await SaveWordFile(`${data.name}[${data.code}]-ai-analysis-result.docx`, base64).then(result => {
+        message.success(result)
+      })
+  }
+}
+
+function share(code, name) {
+  ShareAnalysis(code, name).then(msg => {
+    notify.info({
+      avatar: () =>
+          h(NAvatar, {
+            size: 'small',
+            round: false,
+            src: icon.value
+          }),
+      title: '分享到社区',
+      duration: 1000 * 30,
+      content: () => {
+        return h('div', {
+          style: {
+            'text-align': 'left',
+            'font-size': '14px',
+          }
+        }, {default: () => msg})
+      },
+    })
+  })
+}
 </script>
 
 <template>
@@ -446,6 +767,7 @@ function blinkBorder(findId) {
               <n-button size="tiny" :loading="refreshing" @click="manualRefresh">
                 <template #icon><n-icon :component="RefreshOutline"/></template>
               </n-button>
+              <n-button v-if="data.openAiEnable" size="tiny" type="warning" @click="aiCheckFund(info.name, info.code)">AI 分析</n-button>
               <n-button size="tiny" type="error" @click="showChart(info.code, info.name)">历史净值</n-button>
               <n-button size="tiny" type="warning" @click="search(info.code)">详情</n-button>
               <n-button size="tiny" @click="unFollow(info.code)">取消关注</n-button>
@@ -488,6 +810,81 @@ function blinkBorder(findId) {
       :max-height="300"
       striped
     />
+  </n-modal>
+
+  <n-modal transform-origin="center" v-model:show="modalShow4" preset="card" style="width: max(30%, 400px);max-width: calc(100vw - 32px);"
+           :title="'['+data.name+']AI 分析'">
+    <n-spin size="small" :show="data.loading">
+      <MdEditor v-if="enableEditor" :toolbars="toolbars" ref="mdEditorRef" style="height: 440px;max-height: 60vh;text-align: left"
+                :modelValue="data.airesult" :theme="theme">
+        <template #defToolbars>
+          <ExportPDF :file-name="data.name+'['+data.code+']AI 分析报告'" style="text-align: left"
+                     :modelValue="data.airesult" @onProgress="handleProgress"/>
+        </template>
+      </MdEditor>
+      <div v-if="!enableEditor" ref="aiResultScrollRef" style="height: 440px;max-height: 60vh;text-align: left;overflow-y: auto;">
+        <MdPreview ref="mdPreviewRef" :modelValue="data.airesult" :theme="theme"/>
+      </div>
+    </n-spin>
+    <template #footer>
+      <n-flex justify="space-between" ref="tipsRef">
+        <n-text type="info" v-if="data.time">
+          <n-tag v-if="data.modelName" type="warning" round :title="data.chatId" :bordered="false">
+            {{ data.modelName }}
+          </n-tag>
+          {{ data.time }}
+        </n-text>
+        <n-text type="error">*AI 分析结果仅供参考，请以实际行情为准。投资需谨慎，风险自担。</n-text>
+      </n-flex>
+    </template>
+    <template #action>
+      <n-flex justify="left" style="margin-bottom: 10px">
+        <n-switch v-model:value="enableTools" :round="false">
+          <template #checked>
+            工具调用
+          </template>
+          <template #unchecked>
+            非工具调用
+          </template>
+        </n-switch>
+        <n-switch v-model:value="thinkingMode" :round="false">
+          <template #checked>
+            思考模式
+          </template>
+          <template #unchecked>
+            非思考模式
+          </template>
+        </n-switch>
+        <n-gradient-text type="error" style="margin-left: 10px">
+          *AI 函数工具调用可以增强 AI 获取数据的能力，但会消耗更多 tokens。
+        </n-gradient-text>
+      </n-flex>
+      <n-flex justify="space-between" style="margin-bottom: 10px">
+        <n-select style="width: 31%" v-model:value="data.aiConfigId" label-field="name" value-field="ID"
+                  :options="aiConfigs" placeholder="请选择 AI 模型服务配置"/>
+        <n-select style="width: 31%" v-model:value="data.sysPromptId" label-field="name" value-field="ID"
+                  :options="sysPromptOptions" placeholder="请选择系统提示词"/>
+        <n-select style="width: 31%" v-model:value="data.question" label-field="name" value-field="content"
+                  :options="userPromptOptions" placeholder="请选择用户提示词"/>
+      </n-flex>
+      <n-flex justify="right">
+        <n-input v-model:value="data.question" style="text-align: left" clearable
+                 type="textarea"
+                 :show-count="true"
+                 placeholder="请输入您的问题：例如{{fundName}}[{{fundCode}}] 分析和总结"
+                 :autosize="{
+              minRows: 2,
+              maxRows: 5
+            }"
+        />
+        <n-button size="tiny" type="warning" @click="aiReCheckFund(data.name,data.code)">开始 AI 分析</n-button>
+        <n-button size="tiny" type="info" @click="saveAsImage(data.name,data.code)">保存为图片</n-button>
+        <n-button size="tiny" type="success" @click="copyToClipboard">复制到剪切板</n-button>
+        <n-button size="tiny" type="primary" @click="saveAsMarkdown">保存为 Markdown 文件</n-button>
+        <n-button size="tiny" type="primary" @click="saveAsWord">保存为 Word 文件</n-button>
+        <n-button size="tiny" type="error" @click="share(data.code,data.name)">分享到项目社区</n-button>
+      </n-flex>
+    </template>
   </n-modal>
 
   <div style="position: fixed;bottom: 18px;right:5px;z-index: 10;width: 400px">

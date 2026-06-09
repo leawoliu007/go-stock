@@ -4,7 +4,10 @@
       "Bash(powershell *)",
       "Bash(go *)",
       "Bash(npm run *)",
-      "Bash(git checkout *)"
+      "Bash(git checkout *)",
+      "Bash(wails *)",
+      "Bash(type *)",
+      "Bash(findstr *)"
     ]
   },
   "$version": 4
