@@ -16,7 +16,7 @@ import (
 //-----------------------------------------------------------------------------------
 
 // SensitiveWords 敏感词
-var SensitiveWords = strings.Split("戊边、戍边")
+var SensitiveWords = strings.Split("戊边、戍边", "、")
 
 // ReplaceSensitiveWords 过滤敏感词
 func ReplaceSensitiveWords(text string) string {
