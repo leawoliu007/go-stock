@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(powershell *)",
+      "Bash(go *)",
+      "Bash(npm run *)",
+      "Bash(git checkout *)",
+      "Bash(wails *)"
+    ]
+  },
+  "$version": 4
+}

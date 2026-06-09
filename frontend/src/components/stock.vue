@@ -30,6 +30,7 @@ import {
   SetAlarmChangePercent,
   SetCostPriceAndVolume,
   SetStockAICron,
+  SetStockRemark,
   SetStockSort,
   SetTradingPrice,
   ShareAnalysis,
@@ -138,6 +139,7 @@ const formModel = ref({
   entryPrice: 0,
   takeProfitPrice: 0,
   stopLossPrice: 0,
+  remark: "",
 })
 
 const promptTemplates = ref([])
@@ -1002,7 +1004,19 @@ function setStock(code, name) {
   formModel.value.entryPrice = res[0].EntryPrice || 0
   formModel.value.takeProfitPrice = res[0].TakeProfitPrice || 0
   formModel.value.stopLossPrice = res[0].StopLossPrice || 0
+  formModel.value.remark = res[0].Remark || ""
   modalShow.value = true
+}
+
+function editRemark(code, currentRemark) {
+  const newRemark = window.prompt('请输入备注', currentRemark || '')
+  if (newRemark === null) return
+  SetStockRemark(newRemark.trim(), code).then(res => {
+    message.success(res)
+    GetFollowList(currentGroupId.value).then(result => {
+      followList.value = result
+    })
+  })
 }
 
 function clearFeishi() {
@@ -1692,7 +1706,12 @@ function updateCostPriceAndVolumeNew(code, price, volume, alarm, formModel) {
       //message.success(result)
     })
   }
-  
+
+  // 保存备注
+  SetStockRemark(formModel.remark || '', code).then(result => {
+    //message.success(result)
+  })
+
   SetCostPriceAndVolume(code, price, volume).then(result => {
     modalShow.value = false
     message.success(result)
@@ -2331,6 +2350,16 @@ watch(modalShow6, (newVal) => {
                   </n-tag>
                 </n-flex>
                 <n-flex justify="center">
+                  <n-text 
+                    size="small" 
+                    :type="result.remark ? 'success' : 'info'"
+                    @dblclick="editRemark(result['股票代码'], result.remark)"
+                    style="cursor: pointer; min-width: 40px; text-align: center;"
+                  >
+                    {{ result.remark || '备注' }}
+                  </n-text>
+                </n-flex>
+                <n-flex justify="center">
                   <n-button size="tiny" type="primary" secondary
                             @click="showLightweightKline(result['股票代码'],result['股票名称'])">
                     多周期K线
@@ -2485,6 +2514,16 @@ watch(modalShow6, (newVal) => {
                   </n-tag>
                 </n-flex>
                 <n-flex justify="center">
+                  <n-text 
+                    size="small" 
+                    :type="result.remark ? 'success' : 'info'"
+                    @dblclick="editRemark(result['股票代码'], result.remark)"
+                    style="cursor: pointer; min-width: 40px; text-align: center;"
+                  >
+                    {{ result.remark || '备注' }}
+                  </n-text>
+                </n-flex>
+                <n-flex justify="center">
                   <n-button size="tiny" type="primary" secondary
                             @click="showLightweightKline(result['股票代码'],result['股票名称'])">
                     多周期K线
@@ -2630,6 +2669,11 @@ watch(modalShow6, (newVal) => {
                 {{ formModel.code.indexOf("hk") >= 0 ? "HK$" : "¥" }}
               </template>
             </n-input-number>
+          </n-form-item>
+        </n-gi>
+        <n-gi :span="2">
+          <n-form-item label="备注" path="remark">
+            <n-input v-model:value="formModel.remark" placeholder="请输入备注" style="width: 100%" maxlength="50" show-count />
           </n-form-item>
         </n-gi>
       </n-grid>

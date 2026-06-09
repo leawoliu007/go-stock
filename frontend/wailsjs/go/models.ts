@@ -596,6 +596,7 @@ export namespace data {
 	    EntryPrice: number;
 	    TakeProfitPrice: number;
 	    StopLossPrice: number;
+	    Remark: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new FollowedStock(source);
@@ -621,6 +622,7 @@ export namespace data {
 	        this.EntryPrice = source["EntryPrice"];
 	        this.TakeProfitPrice = source["TakeProfitPrice"];
 	        this.StopLossPrice = source["StopLossPrice"];
+	        this.Remark = source["Remark"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -1173,6 +1175,7 @@ export namespace data {
 	    sort: number;
 	    alarmChangePercent: number;
 	    alarmPrice: number;
+	    remark: string;
 	    Groups: GroupStock[];
 	
 	    static createFrom(source: any = {}) {
@@ -1234,6 +1237,7 @@ export namespace data {
 	        this.sort = source["sort"];
 	        this.alarmChangePercent = source["alarmChangePercent"];
 	        this.alarmPrice = source["alarmPrice"];
+	        this.remark = source["remark"];
 	        this.Groups = this.convertValues(source["Groups"], GroupStock);
 	    }
 	

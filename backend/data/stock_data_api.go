@@ -98,6 +98,7 @@ type StockInfo struct {
 	Sort               int64   `json:"sort"` //排序
 	AlarmChangePercent float64 `json:"alarmChangePercent"`
 	AlarmPrice         float64 `json:"alarmPrice"`
+	Remark             string  `json:"remark"`
 
 	Groups []GroupStock `gorm:"-:all"`
 }
@@ -181,6 +182,7 @@ type FollowedStock struct {
 	EntryPrice         float64
 	TakeProfitPrice    float64
 	StopLossPrice      float64
+	Remark             string
 }
 
 func (receiver FollowedStock) TableName() string {
@@ -560,6 +562,20 @@ func (receiver StockDataApi) SetAlarmChangePercent(val, alarmPrice float64, stoc
 		"alarm_change_percent": val,
 		"alarm_price":          alarmPrice,
 	}).Error
+	if err != nil {
+		logger.SugaredLogger.Error(err.Error())
+		return "设置失败"
+	}
+	return "设置成功"
+}
+
+func (receiver StockDataApi) SetStockRemark(remark, stockCode string) string {
+	if strutil.HasPrefixAny(stockCode, []string{"gb_"}) {
+		stockCode = strings.ToUpper(stockCode)
+		stockCode = strings.Replace(stockCode, "gb_", "us", 1)
+		stockCode = strings.Replace(stockCode, "GB_", "us", 1)
+	}
+	err := db.Dao.Model(&FollowedStock{}).Where("stock_code = ?", strings.ToLower(stockCode)).Update("remark", remark).Error
 	if err != nil {
 		logger.SugaredLogger.Error(err.Error())
 		return "设置失败"

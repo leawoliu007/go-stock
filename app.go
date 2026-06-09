@@ -1620,6 +1620,7 @@ func addStockFollowData(follow data.FollowedStock, stockData *data.StockInfo) {
 	stockData.CostVolume = follow.Volume   //成本量
 	stockData.AlarmChangePercent = follow.AlarmChangePercent
 	stockData.AlarmPrice = follow.AlarmPrice
+	stockData.Remark = follow.Remark
 	stockData.Groups = follow.Groups
 
 	//当前价格
@@ -1743,6 +1744,11 @@ func (a *App) SetTradingPrice(stockCode string, entryPrice, takeProfitPrice, sto
 func (a *App) SetAlarmChangePercent(val, alarmPrice float64, stockCode string) string {
 	return data.NewStockDataApi().SetAlarmChangePercent(val, alarmPrice, stockCode)
 }
+
+func (a *App) SetStockRemark(remark, stockCode string) string {
+	return data.NewStockDataApi().SetStockRemark(remark, stockCode)
+}
+
 func (a *App) SetStockSort(sort int64, stockCode string) {
 	data.NewStockDataApi().SetStockSort(sort, stockCode)
 }
