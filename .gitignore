@@ -106,6 +106,7 @@ dist
 .DS_Store
 
 .idea/
+.kilo/
 /data/*.db*
 ai-assistant-web/data/*.db*
 *.exe
