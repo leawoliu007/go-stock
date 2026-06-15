@@ -34,7 +34,7 @@ import {
   GetAiConfigs,
   GetAIResponseResult,
   GetConfig,
-  GetFollowedFundPaged,
+  GetFollowedFund,
   GetFundHistoryNetValue,
   GetFundTop10Holdings,
   GetfundList,
@@ -104,13 +104,7 @@ const data = reactive({
 })
 
 const followList = ref([])
-const followTotalCount = ref(0)
-const followTotalPages = ref(1)
-const followPage = ref(1)
-const followPageSize = 4
 const followLoading = ref(false)
-const followKeyword = ref('')
-let followSearchTimer = null
 const options = ref([])
 const ticker = ref({})
 const REFRESH_INTERVAL = 60
@@ -120,30 +114,12 @@ const countdownTimer = ref({})
 
 function loadFollowedFunds() {
   followLoading.value = true
-  GetFollowedFundPaged(followPage.value, followPageSize, followKeyword.value).then(result => {
-    if (result) {
-      followList.value = result.items || []
-      followTotalCount.value = result.totalCount || 0
-      followTotalPages.value = result.totalPages || 1
-      loadCurrentPageHoldings()
-    }
+  GetFollowedFund().then(result => {
+    followList.value = result || []
+    loadCurrentPageHoldings()
   }).finally(() => {
     followLoading.value = false
   })
-}
-
-function onFollowPageChange(page) {
-  followPage.value = page
-  loadFollowedFunds()
-}
-
-function onFollowSearch(val) {
-  followKeyword.value = val || ''
-  followPage.value = 1
-  if (followSearchTimer) clearTimeout(followSearchTimer)
-  followSearchTimer = setTimeout(() => {
-    loadFollowedFunds()
-  }, 500)
 }
 
 function loadCurrentPageHoldings() {
@@ -305,9 +281,6 @@ function unFollow(code) {
   UnFollowFund(code).then(result => {
     if (result) {
       message.success("取消关注成功")
-      if (followList.value.length <= 1 && followPage.value > 1) {
-        followPage.value--
-      }
       loadFollowedFunds()
     }
   })
@@ -649,15 +622,6 @@ function share(code, name) {
 
   <n-divider style="margin: 4px 0 8px 0"/>
 
-  <n-input
-    v-model:value="followKeyword"
-    placeholder="搜索基金名称/代码"
-    clearable
-    size="small"
-    style="margin-bottom: 8px;"
-    @update:value="onFollowSearch"
-  />
-
   <n-grid :x-gap="10" :y-gap="10" :cols="2" responsive="screen" item-responsive>
     <n-gi v-for="info in followList" :key="info.code" :id="info.code + '_gi'">
       <n-card :id="info.code" size="small" hoverable>
@@ -778,9 +742,7 @@ function share(code, name) {
     </n-gi>
   </n-grid>
 
-  <n-flex justify="center" style="margin-top: 8px;" v-if="followTotalPages > 1">
-    <n-pagination v-model:page="followPage" :page-count="followTotalPages" :page-size="followPageSize" @update:page="onFollowPageChange" size="small"/>
-  </n-flex>
+
 
   <n-modal
     v-model:show="chartModalShow"
