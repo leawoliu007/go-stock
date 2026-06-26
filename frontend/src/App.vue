@@ -630,75 +630,7 @@ const menuOptions = ref([
           key: 'uplimitLadder',
           icon: renderIcon(LocalFireDepartmentRound),
         },
-        {
-          label: () =>
-              h(
-                  RouterLink,
-                  {
-                    to: {
-                      name: 'research',
-                      query: {
-                        name:"提示词模板",
-                      },
-                    },
-                    onClick: () => {
-                      activeKey.value = 'research'
-                      setTimeout(() => {
-                        EventsEmit("changeResearchTab", {ID: 3, name: '提示词模板'})
-                      }, 100)
-                    },
-                  },
-                  {default: () => '提示词模板'}
-              ),
-          key: 'research3',
-          icon: renderIcon(Prompt),
-        },
-        {
-          label: () =>
-              h(
-                  RouterLink,
-                  {
-                    to: {
-                      name: 'research',
-                      query: {
-                        name:"提示词广场",
-                      },
-                    },
-                    onClick: () => {
-                      activeKey.value = 'research'
-                      setTimeout(() => {
-                        EventsEmit("changeResearchTab", {ID: 10, name: '提示词广场'})
-                      }, 100)
-                    },
-                  },
-                  {default: () => '提示词广场'}
-              ),
-          key: 'promptPlaza',
-          icon: renderIcon(GlobeOutline),
-        },
-        {
-          label: () =>
-              h(
-                  RouterLink,
-                  {
-                    to: {
-                      name: 'research',
-                      query: {
-                        name:"问答广场",
-                      },
-                    },
-                    onClick: () => {
-                      activeKey.value = 'research'
-                      setTimeout(() => {
-                        EventsEmit("changeResearchTab", {ID: 11, name: '问答广场'})
-                      }, 100)
-                    },
-                  },
-                  {default: () => '问答广场'}
-              ),
-          key: 'promptQa',
-          icon: renderIcon(ChatbubblesOutline),
-        },
+
         {
           label: () =>
               h(

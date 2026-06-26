@@ -4,7 +4,6 @@ import {GetAIResponseResultList} from "../../wailsjs/go/main/App";
 import {NButton, NEllipsis, NText} from "naive-ui";
 import ResearchReport from "./researchReport.vue";
 import AiRecommendStocksList from "./aiRecommendStocksList.vue";
-import PromptTemplateList from "./promptTemplateList.vue";
 import AllStockList from "./allStockList.vue";
 import AllStockInfoList from "./allStockInfoList.vue";
 import CronTaskManager from "./cron-task-manager.vue";
@@ -13,8 +12,6 @@ import StockChangesMonitor from "./stockChangesMonitor.vue";
 import MCPServiceManager from "./mcp-server-manager.vue";
 import SkillManager from "./skill-manager.vue";
 import UplimitLadder from "./uplimitLadder.vue";
-import PromptPlaza from "./promptPlaza.vue";
-import PromptQa from "./promptQa.vue";
 import SelectStock from "./SelectStock.vue";
 import {EventsOff, EventsOn} from "../../wailsjs/runtime";
 import {useRoute} from 'vue-router'
@@ -58,15 +55,7 @@ function updateTab(name) {
       <n-tab-pane name="涨停梯队">
         <UplimitLadder/>
       </n-tab-pane>
-      <n-tab-pane name="提示词模板">
-        <PromptTemplateList/>
-      </n-tab-pane>
-      <n-tab-pane name="提示词广场">
-        <PromptPlaza/>
-      </n-tab-pane>
-      <n-tab-pane name="问答广场">
-        <PromptQa/>
-      </n-tab-pane>
+
       <n-tab-pane name="形态选股">
         <AllStockList/>
       </n-tab-pane>
