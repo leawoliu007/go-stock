@@ -342,7 +342,7 @@ async function handleShare() {
   }
   const token = localStorage.getItem('promptPlazaToken')
   if (!token) {
-    message.warning('请先在"提示词广场"登录后再分享')
+    
     return
   }
   shareDataRef.loading = true
@@ -375,7 +375,7 @@ async function handleShare() {
     message.success('分享成功！')
     shareDataRef.visible = false
   } catch (e) {
-    message.error('分享失败: ' + e.message)
+    if (e.message !== '请先登录') message.error('分享失败: ' + e.message)
   } finally {
     shareDataRef.loading = false
   }

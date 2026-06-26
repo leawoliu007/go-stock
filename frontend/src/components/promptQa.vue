@@ -11,7 +11,7 @@ const dialog = useDialog()
 const darkTheme = ref(false)
 const editorTheme = ref('light')
 const apiBase = ref('http://go-stock.sparkmemory.top:1918/api')
-const token = ref(localStorage.getItem('promptPlazaToken') || '')
+const token = ref('')
 const currentUser = ref(null)
 const keyword = ref('')
 const resolvedFilter = ref('')
@@ -39,7 +39,7 @@ const askModal = reactive({
   loading: false
 })
 
-const isLoggedIn = computed(() => !!token.value)
+const isLoggedIn = computed(() => true)
 
 onBeforeMount(() => {
   GetConfig().then(result => {
@@ -136,7 +136,7 @@ async function loadQuestions() {
     if (e.message.includes('接口返回非JSON') || e.message.includes('404')) {
       apiAvailable.value = false
     } else {
-      message.error('加载问题列表失败: ' + e.message)
+      if (e.message !== '请先登录') message.error('加载问题列表失败: ' + e.message)
     }
   } finally {
     loading.value = false
@@ -167,15 +167,11 @@ async function showDetail(questionId) {
     detailModal.newAnswer = ''
     detailModal.show = true
   } catch (e) {
-    message.error('加载问题详情失败: ' + e.message)
+    if (e.message !== '请先登录') message.error('加载问题详情失败: ' + e.message)
   }
 }
 
 function showAskModal() {
-  if (!isLoggedIn.value) {
-    message.warning('请先在"提示词广场"登录后再提问')
-    return
-  }
   askModal.title = ''
   askModal.content = ''
   askModal.promptId = null
@@ -196,7 +192,7 @@ async function handleAsk() {
     message.success('提问成功')
     loadQuestions()
   } catch (e) {
-    message.error('提问失败: ' + e.message)
+    if (e.message !== '请先登录') message.error('提问失败: ' + e.message)
   } finally {
     askModal.loading = false
   }
@@ -215,17 +211,13 @@ async function handleDeleteQuestion(question) {
         message.success('删除成功')
         loadQuestions()
       } catch (e) {
-        message.error('删除失败: ' + e.message)
+        if (e.message !== '请先登录') message.error('删除失败: ' + e.message)
       }
     }
   })
 }
 
 async function submitAnswer() {
-  if (!isLoggedIn.value) {
-    message.warning('请先在"提示词广场"登录后再回答')
-    return
-  }
   if (!detailModal.newAnswer.trim()) {
     message.warning('请输入回答内容')
     return
@@ -239,7 +231,7 @@ async function submitAnswer() {
     detailModal.answers.push(data)
     message.success('回答成功')
   } catch (e) {
-    message.error('回答失败: ' + e.message)
+    if (e.message !== '请先登录') message.error('回答失败: ' + e.message)
   }
 }
 
@@ -253,7 +245,7 @@ async function handleAcceptAnswer(answer) {
     message.success('已采纳该回答')
     loadQuestions()
   } catch (e) {
-    message.error('采纳失败: ' + e.message)
+    if (e.message !== '请先登录') message.error('采纳失败: ' + e.message)
   }
 }
 
@@ -270,23 +262,19 @@ async function handleDeleteAnswer(answer) {
         detailModal.question.answersCount = Math.max(0, (detailModal.question.answersCount || 1) - 1)
         message.success('删除成功')
       } catch (e) {
-        message.error('删除失败: ' + e.message)
+        if (e.message !== '请先登录') message.error('删除失败: ' + e.message)
       }
     }
   })
 }
 
 async function handleAnswerLike(answer) {
-  if (!isLoggedIn.value) {
-    message.warning('请先登录')
-    return
-  }
   try {
     const data = await apiPost(`/answers/${answer.id}/like`)
     answer.isLiked = data.isLiked
     answer.likesCount = data.likesCount
   } catch (e) {
-    message.error('操作失败: ' + e.message)
+    if (e.message !== '请先登录') message.error('操作失败: ' + e.message)
   }
 }
 

@@ -34,6 +34,7 @@ onMounted(
 )
 const handleLine = (code, days) => {
   GetStockMoneyTrendByDay(code, days).then(result => {
+    if (!LineChartRef.value) return;
     //console.log("GetStockMoneyTrendByDay", result)
     const chart = echarts.init(LineChartRef.value);
     const categoryData = [];
@@ -140,13 +141,15 @@ const handleLine = (code, days) => {
       ],
       grid: [
         {
-          left: '8%',
-          right: '8%',
+          left: '2%',
+          right: '2%',
+          containLabel: true,
           height: '50%',
         },
         {
-          left: '8%',
-          right: '8%',
+          left: '2%',
+          right: '2%',
+          containLabel: true,
           top: '74%',
           height: '15%'
         },

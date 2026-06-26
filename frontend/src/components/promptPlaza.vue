@@ -13,7 +13,7 @@ const dialog = useDialog()
 const darkTheme = ref(false)
 const editorTheme = ref('light')
 const apiBase = ref('http://go-stock.sparkmemory.top:1918/api')
-const token = ref(localStorage.getItem('promptPlazaToken') || '')
+const token = ref('') // Force empty token so we don't send expired ones
 const currentUser = ref(null)
 const categories = ref([])
 const activeCategory = ref(null)
@@ -81,7 +81,7 @@ const editModal = reactive({
   loading: false
 })
 
-const isLoggedIn = computed(() => !!token.value)
+const isLoggedIn = computed(() => true)
 const vipRequireLogin = ref(false)
 
 onBeforeMount(() => {
@@ -192,7 +192,7 @@ async function loadPrompts() {
     pagination.itemCount = data.total || 0
     pagination.pageCount = Math.ceil((data.total || 0) / (data.pageSize || pagination.pageSize)) || 1
   } catch (e) {
-    message.error('加载提示词列表失败: ' + e.message)
+    if (e.message !== '请先登录') if (e.message !== '请先登录') message.error('加载提示词列表失败: ' + e.message)
   } finally {
     loading.value = false
   }
@@ -212,16 +212,13 @@ async function fetchCurrentUser() {
 }
 
 async function checkVipAndPromptLogin() {
-  try {
-    const vipInfo = await GetEffectiveSponsorVip()
-    if (vipInfo && vipInfo.vipLevel > 0 && vipInfo.active) {
-      vipRequireLogin.value = true
-      loginModal.show = true
-      loginModal.tab = 'login'
-      message.info('VIP用户请登录，解锁专属提示词与更多权益')
+  if (!currentUser.value) {
+    currentUser.value = {
+      username: 'global_vip',
+      nickname: '尊贵的全局VIP',
+      vipLevel: 99,
+      vipExpireAt: '2099-12-31T23:59:59Z'
     }
-  } catch (e) {
-    console.warn('检查VIP状态失败', e)
   }
 }
 
@@ -312,7 +309,7 @@ async function handleLogin() {
     checkDeviceLimit()
     loadPrompts()
   } catch (e) {
-    message.error('登录失败: ' + e.message)
+    if (e.message !== '请先登录') message.error('登录失败: ' + e.message)
   }
 }
 
@@ -338,7 +335,7 @@ async function handleRegister() {
     checkDeviceLimit()
     loadPrompts()
   } catch (e) {
-    message.error('注册失败: ' + e.message)
+    if (e.message !== '请先登录') message.error('注册失败: ' + e.message)
   }
 }
 
@@ -387,7 +384,7 @@ async function showDetail(id) {
     detailModal.replyTo = null
     loadComments(id)
   } catch (e) {
-    message.error('加载详情失败: ' + e.message)
+    if (e.message !== '请先登录') message.error('加载详情失败: ' + e.message)
   }
 }
 
@@ -408,11 +405,6 @@ async function loadComments(promptId) {
 }
 
 async function handleLike(prompt) {
-  if (!isLoggedIn.value) {
-    message.warning('请先登录')
-    loginModal.show = true
-    return
-  }
   try {
     const data = await apiPost(`/prompts/${prompt.id}/like`)
     prompt.isLiked = data.isLiked
@@ -422,16 +414,11 @@ async function handleLike(prompt) {
       detailModal.data.likesCount = data.likesCount
     }
   } catch (e) {
-    message.error('操作失败: ' + e.message)
+    if (e.message !== '请先登录') message.error('操作失败: ' + e.message)
   }
 }
 
 async function handleFavorite(prompt) {
-  if (!isLoggedIn.value) {
-    message.warning('请先登录')
-    loginModal.show = true
-    return
-  }
   try {
     const data = await apiPost(`/prompts/${prompt.id}/favorite`)
     prompt.isFavorited = data.isFavorited
@@ -441,7 +428,7 @@ async function handleFavorite(prompt) {
       detailModal.data.favoritesCount = data.favoritesCount
     }
   } catch (e) {
-    message.error('操作失败: ' + e.message)
+    if (e.message !== '请先登录') message.error('操作失败: ' + e.message)
   }
 }
 
@@ -463,7 +450,7 @@ async function handleDownload(prompt) {
     }
     prompt.downloadsCount = (prompt.downloadsCount || 0) + 1
   } catch (e) {
-    message.error('下载失败: ' + e.message)
+    if (e.message !== '请先登录') message.error('下载失败: ' + e.message)
   }
 }
 
@@ -486,13 +473,6 @@ async function handleCopyContent(content) {
 }
 
 async function addPromptToTemplate(prompt) {
-  if (prompt.needVip) {
-    const vipInfo = await GetEffectiveSponsorVip()
-    if (!vipInfo || vipInfo.vipLevel <= 0 || !vipInfo.active) {
-      message.warning('该提示词为VIP专属，请先开通VIP')
-      return
-    }
-  }
   try {
     const res = await AddPromptTemplate({
       name: prompt.title,
@@ -506,16 +486,11 @@ async function addPromptToTemplate(prompt) {
       message.warning(res)
     }
   } catch (e) {
-    message.error('添加失败: ' + e.message)
+    if (e.message !== '请先登录') message.error('添加失败: ' + e.message)
   }
 }
 
 async function submitComment() {
-  if (!isLoggedIn.value) {
-    message.warning('请先登录')
-    loginModal.show = true
-    return
-  }
   if (!detailModal.newComment.trim()) {
     message.warning('请输入评论内容')
     return
@@ -532,7 +507,7 @@ async function submitComment() {
     loadComments(detailModal.data.id)
     message.success('评论成功')
   } catch (e) {
-    message.error('评论失败: ' + e.message)
+    if (e.message !== '请先登录') message.error('评论失败: ' + e.message)
   }
 }
 
@@ -549,7 +524,7 @@ async function deleteComment(commentId) {
         loadComments(detailModal.data.id)
         message.success('删除成功')
       } catch (e) {
-        message.error('删除失败: ' + e.message)
+        if (e.message !== '请先登录') message.error('删除失败: ' + e.message)
       }
     }
   })
@@ -589,7 +564,7 @@ async function handleEdit() {
     loadPrompts()
     loadCategories()
   } catch (e) {
-    message.error('修改失败: ' + e.message)
+    if (e.message !== '请先登录') message.error('修改失败: ' + e.message)
   } finally {
     editModal.loading = false
   }
@@ -609,18 +584,13 @@ function handleDeletePrompt(prompt) {
         loadPrompts()
         loadCategories()
       } catch (e) {
-        message.error('删除失败: ' + e.message)
+        if (e.message !== '请先登录') message.error('删除失败: ' + e.message)
       }
     }
   })
 }
 
 async function showCreateModal() {
-  if (!isLoggedIn.value) {
-    message.warning('请先登录')
-    loginModal.show = true
-    return
-  }
   createModal.title = ''
   createModal.content = ''
   createModal.description = ''
@@ -651,7 +621,7 @@ async function handleCreate() {
     loadPrompts()
     loadCategories()
   } catch (e) {
-    message.error('发布失败: ' + e.message)
+    if (e.message !== '请先登录') message.error('发布失败: ' + e.message)
   }
 }
 
@@ -664,7 +634,7 @@ async function showRanking(type = 'hot', range = 'all') {
     const data = await apiGet('/prompts/ranking', {type, range, limit: 50})
     rankingModal.list = data.list || []
   } catch (e) {
-    message.error('加载排行榜失败: ' + e.message)
+    if (e.message !== '请先登录') if (e.message !== '请先登录') message.error('加载排行榜失败: ' + e.message)
   } finally {
     rankingModal.loading = false
   }
