@@ -442,6 +442,10 @@ export function GetStockRealTimePrice(arg1) {
   return window['go']['main']['App']['GetStockRealTimePrice'](arg1);
 }
 
+export function GetStocksNDayChange(arg1) {
+  return window['go']['main']['App']['GetStocksNDayChange'](arg1);
+}
+
 export function GetTdxCallAuction(arg1, arg2, arg3) {
   return window['go']['main']['App']['GetTdxCallAuction'](arg1, arg2, arg3);
 }

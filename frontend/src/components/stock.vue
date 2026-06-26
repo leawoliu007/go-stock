@@ -35,7 +35,8 @@ import {
   SetTradingPrice,
   ShareAnalysis,
   UnFollow,
-  UpdateGroupSort
+  UpdateGroupSort,
+  GetStocksNDayChange
 } from '../../wailsjs/go/main/App'
 import {
   NAvatar,
@@ -58,7 +59,7 @@ import {
   WindowReload,
   WindowUnfullscreen
 } from '../../wailsjs/runtime'
-import {Add, ChatboxOutline,} from '@vicons/ionicons5'
+import {Add, ChatboxOutline, ArrowDownOutline, ArrowUpOutline} from '@vicons/ionicons5'
 import {MdEditor, MdPreview} from 'md-editor-v3';
 // preview.css相比style.css少了编辑器那部分样式
 //import 'md-editor-v3/lib/preview.css';
@@ -181,27 +182,53 @@ const danmakuColor = computed(() => {
 
 const icon = ref('https://raw.githubusercontent.com/ArvinLovegood/go-stock/master/build/appicon.png');
 
+// ── 排序状态 ───────────────────────────────────────────────────────────────
+// sortMode: 'custom' | '1day_desc' | '1day_asc' | '3day_desc' | '3day_asc' | '5day_desc' | '5day_asc'
+const sortMode = ref('custom')
+const multiDayChanges = ref({})  // { [stockCode]: changePercent }
+const sortLoading = ref(false)
+
+function getResultList(obj) {
+  return Object.values(obj)
+}
+
+function applySortMode(list) {
+  if (sortMode.value === 'custom') {
+    // 原始：按 key 字典序（即 padded sort 值）
+    return list.slice().sort((a, b) => a.key < b.key ? -1 : a.key > b.key ? 1 : 0)
+  }
+  const [dim, dir] = sortMode.value.split('_')  // e.g. '3day', 'desc'
+  const asc = dir === 'asc'
+  return list.slice().sort((a, b) => {
+    let va, vb
+    if (dim === '1day') {
+      va = a.changePercent ?? 0
+      vb = b.changePercent ?? 0
+    } else {
+      const codeA = (a['股票代码'] || '').toLowerCase()
+      const codeB = (b['股票代码'] || '').toLowerCase()
+      va = multiDayChanges.value[codeA] ?? null
+      vb = multiDayChanges.value[codeB] ?? null
+      // 没有数据的排到最后
+      if (va === null && vb === null) return 0
+      if (va === null) return 1
+      if (vb === null) return -1
+    }
+    return asc ? va - vb : vb - va
+  })
+}
+
 const sortedResults = computed(() => {
-  const sortedKeys = keys(results.value).sort();
-  const sortedObject = {};
-  sortedKeys.forEach(key => {
-    sortedObject[key] = results.value[key];
-  });
-  return sortedObject
-});
+  const list = getResultList(results.value)
+  return applySortMode(list)
+})
 
 const groupResults = computed(() => {
-  const group = {}
-  if (currentGroupId.value === 0) {
-    return sortedResults.value
-  } else {
-    for (const key in sortedResults.value) {
-      if (stocks.value.includes(sortedResults.value[key]['股票代码'])) {
-        group[key] = sortedResults.value[key]
-      }
-    }
-    return group
-  }
+  const all = getResultList(results.value)
+  const filtered = currentGroupId.value === 0
+    ? all
+    : all.filter(r => stocks.value.includes(r['股票代码']))
+  return applySortMode(filtered)
 })
 const showPopover = ref(false)
 // 拖拽相关变量
@@ -2226,6 +2253,42 @@ watch(modalShow6, (newVal) => {
     klineAutoCloseTimer.value = null
   }
 })
+
+// \u2500\u2500 \u6da8\u5e45\u6392\u5e8f \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+async function setSortMode(mode) {
+  const dim = mode.replace('_desc', '').replace('_asc', '')
+  // \u5207\u6362\u6d89\u53ca\u591a\u65e5\u6570\u636e\u4e14\u672a\u52a0\u8f7d\u65f6\uff0c\u5148\u62c9\u53d6\u6570\u636e
+  if ((dim === '3day' || dim === '5day') && Object.keys(multiDayChanges.value).length === 0) {
+    const days = dim === '3day' ? 3 : 5
+    sortLoading.value = true
+    try {
+      const result = await GetStocksNDayChange(days)
+      multiDayChanges.value = result || {}
+    } catch(e) {
+      message.error('\u83b7\u53d6\u591a\u65e5\u6da8\u5e45\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5')
+      sortLoading.value = false
+      return
+    }
+    sortLoading.value = false
+  }
+  // \u5207\u6362\u7ef4\u5ea6\u65f6\u6e05\u7a7a\u591a\u65e5\u7f13\u5b58
+  const prevDim = sortMode.value.replace('_desc','').replace('_asc','')
+  if (dim !== prevDim && (dim === '3day' || dim === '5day')) {
+    const days = dim === '3day' ? 3 : 5
+    sortLoading.value = true
+    try {
+      const result = await GetStocksNDayChange(days)
+      multiDayChanges.value = result || {}
+    } catch(e) {
+      message.error('\u83b7\u53d6\u591a\u65e5\u6da8\u5e45\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5')
+      sortLoading.value = false
+      return
+    }
+    sortLoading.value = false
+  }
+  sortMode.value = mode
+}
+
 </script>
 
 <template>
@@ -2240,7 +2303,22 @@ watch(modalShow6, (newVal) => {
   </vue-danmaku>
   <n-tabs type="card" style="--wails-draggable:no-drag" animated addable :data-currentGroupId="currentGroupId"
           :value="String(currentGroupId)" @add="addTab" @update:value="updateTab" placement="top" @close="(key)=>{delTab(key)}">
-
+    <template #suffix>
+      <n-spin :show="sortLoading" size="small">
+        <n-button-group size="small" style="margin-right: 15px;">
+          <n-button :type="sortMode === 'custom' ? 'primary' : 'default'" @click="setSortMode('custom')">默认排序</n-button>
+          <n-button :type="sortMode.startsWith('1day') ? 'primary' : 'default'" @click="setSortMode(sortMode === '1day_desc' ? '1day_asc' : '1day_desc')">
+            1日涨幅 <n-icon v-if="sortMode.startsWith('1day')" :component="sortMode === '1day_desc' ? ArrowDownOutline : ArrowUpOutline" />
+          </n-button>
+          <n-button :type="sortMode.startsWith('3day') ? 'primary' : 'default'" @click="setSortMode(sortMode === '3day_desc' ? '3day_asc' : '3day_desc')">
+            3日涨幅 <n-icon v-if="sortMode.startsWith('3day')" :component="sortMode === '3day_desc' ? ArrowDownOutline : ArrowUpOutline" />
+          </n-button>
+          <n-button :type="sortMode.startsWith('5day') ? 'primary' : 'default'" @click="setSortMode(sortMode === '5day_desc' ? '5day_asc' : '5day_desc')">
+            5日涨幅 <n-icon v-if="sortMode.startsWith('5day')" :component="sortMode === '5day_desc' ? ArrowDownOutline : ArrowUpOutline" />
+          </n-button>
+        </n-button-group>
+      </n-spin>
+    </template>
     <n-tab-pane closable name="0" :tab="'全部'">
       <n-grid :x-gap="8" :cols="3" :y-gap="8">
         <n-gi :id="result['股票代码']+'_gi'" v-for="result in sortedResults" style="margin-left: 2px;">

@@ -3246,3 +3246,44 @@ func (a *App) GetMCPToolsByServerID(serverID uint) []models.MCPServerTool {
 func (a *App) GetAllMCPTools() []models.MCPServerTool {
 	return data.NewMCPServerApi().GetAllTools()
 }
+
+// GetStocksNDayChange 批量并发获取所有自选股的 N 日累计涨幅，供前端一键排序使用。
+// days=3 表示近3个交易日涨幅，days=5 表示近5个交易日涨幅。
+// 返回 map[stockCode(小写)] → changePercent(百分比，如 2.35 表示 +2.35%)
+func (a *App) GetStocksNDayChange(days int) map[string]float64 {
+	if days <= 0 {
+		days = 3
+	}
+	dest := &[]data.FollowedStock{}
+	db.Dao.Model(&data.FollowedStock{}).Find(dest)
+
+	result := make(map[string]float64)
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+
+	fetchN := days + 3 // 多取几根，避免非交易日占位不足
+
+	for _, stock := range *dest {
+		wg.Add(1)
+		go func(code string) {
+			defer wg.Done()
+			kResult := data.FetchKLineWithFallback(code, "", "101", fetchN, "")
+			if kResult == nil || kResult.Data == nil || len(*kResult.Data) < 2 {
+				return
+			}
+			d := *kResult.Data
+			// 取最早一根（作为 N 日前基准）和最新一根
+			baseClose, err1 := convertor.ToFloat(d[0].Close)
+			lastClose, err2 := convertor.ToFloat(d[len(d)-1].Close)
+			if err1 != nil || err2 != nil || baseClose <= 0 {
+				return
+			}
+			change := (lastClose - baseClose) / baseClose * 100
+			mu.Lock()
+			result[strings.ToLower(code)] = change
+			mu.Unlock()
+		}(stock.StockCode)
+	}
+	wg.Wait()
+	return result
+}

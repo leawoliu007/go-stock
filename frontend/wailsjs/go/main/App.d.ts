@@ -226,6 +226,8 @@ export function GetStockMoneyTrendByDay(arg1:string,arg2:number):Promise<Array<R
 
 export function GetStockRealTimePrice(arg1:string):Promise<Record<string, any>>;
 
+export function GetStocksNDayChange(arg1:number):Promise<Record<string, number>>;
+
 export function GetTdxCallAuction(arg1:string,arg2:number,arg3:number):Promise<any>;
 
 export function GetTdxCompanyCategoryContent(arg1:string,arg2:string):Promise<data.TdxCompanyInfoSection>;
