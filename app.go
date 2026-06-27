@@ -225,6 +225,11 @@ func (a *App) CheckUpdate(flag int) {
 	if updateChannel == "" {
 		updateChannel = "release"
 	}
+	// 用户选择关闭版本更新时，直接跳过
+	if updateChannel == "none" {
+		logger.SugaredLogger.Info("版本自动更新已关闭，跳过检查")
+		return
+	}
 
 	githubApiHeaders := map[string]string{
 		"Accept":               "application/vnd.github+json",
@@ -461,7 +466,15 @@ func (a *App) isVip(sponsorCode string, downloadUrl string, releaseVersion *mode
 		}
 		vipLevel = a.SponsorInfo["vipLevel"].(string)
 		vipStartTime, err := time.ParseInLocation("2006-01-02 15:04:05", a.SponsorInfo["vipStartTime"].(string), time.Local)
+		if err != nil {
+			logger.SugaredLogger.Error(err.Error())
+			return "", vipLevel, false
+		}
 		vipEndTime, err := time.ParseInLocation("2006-01-02 15:04:05", a.SponsorInfo["vipEndTime"].(string), time.Local)
+		if err != nil {
+			logger.SugaredLogger.Error(err.Error())
+			return "", vipLevel, false
+		}
 		vipAuthTime, err := time.ParseInLocation("2006-01-02 15:04:05", a.SponsorInfo["vipAuthTime"].(string), time.Local)
 		if err != nil {
 			logger.SugaredLogger.Error(err.Error())
@@ -520,11 +533,12 @@ func (a *App) syncNews() {
 	url := fmt.Sprintf("http://go-stock.sparkmemory.top:16666/FinancialNews/json?since=%d", time.Now().Add(-24*time.Hour).Unix())
 	//logger.SugaredLogger.Infof("syncNews:%s", url)
 	resp, err := client.R().SetDoNotParseResponse(true).Get(url)
-	body := resp.RawBody()
-	defer body.Close()
 	if err != nil {
 		logger.SugaredLogger.Errorf("syncNews error:%s", err.Error())
+		return
 	}
+	body := resp.RawBody()
+	defer body.Close()
 	scanner := bufio.NewScanner(body)
 	for scanner.Scan() {
 		//line := scanner.Text()
@@ -856,32 +870,15 @@ func (a *App) CheckStockBaseInfo(ctx context.Context) {
 		SetResult(stockBasics).
 		Get("http://8.134.249.145:18080/go-stock/stock_basic.json")
 
-	db.Dao.Unscoped().Model(&data.StockBasic{}).Where("1=1").Delete(&data.StockBasic{})
-	err := db.Dao.CreateInBatches(stockBasics, 400).Error
-	if err != nil {
-		logger.SugaredLogger.Errorf("保存StockBasic股票基础信息失败:%s", err.Error())
+	if len(*stockBasics) > 0 {
+		db.Dao.Unscoped().Model(&data.StockBasic{}).Where("1=1").Delete(&data.StockBasic{})
+		err := db.Dao.CreateInBatches(stockBasics, 400).Error
+		if err != nil {
+			logger.SugaredLogger.Errorf("保存StockBasic股票基础信息失败:%s", err.Error())
+		}
+	} else {
+		logger.SugaredLogger.Warn("获取A股基础信息为空，跳过更新以防止清空数据库")
 	}
-
-	//count := int64(0)
-	//db.Dao.Model(&data.StockBasic{}).Count(&count)
-	//if count == int64(len(*stockBasics)) {
-	//	return
-	//}
-	//for _, stock := range *stockBasics {
-	//	stockInfo := &data.StockBasic{
-	//		TsCode: stock.TsCode,
-	//		Name:   stock.Name,
-	//		Symbol: stock.Symbol,
-	//		BKCode: stock.BKCode,
-	//		BKName: stock.BKName,
-	//	}
-	//	db.Dao.Model(&data.StockBasic{}).Where("ts_code = ?", stock.TsCode).First(stockInfo)
-	//	if stockInfo.ID == 0 {
-	//		db.Dao.Model(&data.StockBasic{}).Create(stockInfo)
-	//	} else {
-	//		db.Dao.Model(&data.StockBasic{}).Where("ts_code = ?", stock.TsCode).Updates(stockInfo)
-	//	}
-	//}
 
 	stockHKBasics := &[]models.StockInfoHK{}
 	data.SharedHTTPClient.R().
@@ -889,52 +886,31 @@ func (a *App) CheckStockBaseInfo(ctx context.Context) {
 		SetResult(stockHKBasics).
 		Get("http://8.134.249.145:18080/go-stock/stock_base_info_hk.json")
 
-	db.Dao.Unscoped().Model(&models.StockInfoHK{}).Where("1=1").Delete(&models.StockInfoHK{})
-	err = db.Dao.CreateInBatches(stockHKBasics, 400).Error
-	if err != nil {
-		logger.SugaredLogger.Errorf("保存StockInfoHK股票基础信息失败:%s", err.Error())
+	if len(*stockHKBasics) > 0 {
+		db.Dao.Unscoped().Model(&models.StockInfoHK{}).Where("1=1").Delete(&models.StockInfoHK{})
+		err := db.Dao.CreateInBatches(stockHKBasics, 400).Error
+		if err != nil {
+			logger.SugaredLogger.Errorf("保存StockInfoHK股票基础信息失败:%s", err.Error())
+		}
+	} else {
+		logger.SugaredLogger.Warn("获取港股基础信息为空，跳过更新以防止清空数据库")
 	}
 
-	//for _, stock := range *stockHKBasics {
-	//	stockInfo := &models.StockInfoHK{
-	//		Code:   stock.Code,
-	//		Name:   stock.Name,
-	//		BKName: stock.BKName,
-	//		BKCode: stock.BKCode,
-	//	}
-	//	db.Dao.Model(&models.StockInfoHK{}).Where("code = ?", stock.Code).First(stockInfo)
-	//	if stockInfo.ID == 0 {
-	//		db.Dao.Model(&models.StockInfoHK{}).Create(stockInfo)
-	//	} else {
-	//		db.Dao.Model(&models.StockInfoHK{}).Where("code = ?", stock.Code).Updates(stockInfo)
-	//	}
-	//}
 	stockUSBasics := &[]models.StockInfoUS{}
 	data.SharedHTTPClient.R().
 		SetHeader("user", "go-stock").
 		SetResult(stockUSBasics).
 		Get("http://8.134.249.145:18080/go-stock/stock_base_info_us.json")
 
-	db.Dao.Unscoped().Model(&models.StockInfoUS{}).Where("1=1").Delete(&models.StockInfoUS{})
-	err = db.Dao.CreateInBatches(stockUSBasics, 400).Error
-	if err != nil {
-		logger.SugaredLogger.Errorf("保存StockInfoUS股票基础信息失败:%s", err.Error())
+	if len(*stockUSBasics) > 0 {
+		db.Dao.Unscoped().Model(&models.StockInfoUS{}).Where("1=1").Delete(&models.StockInfoUS{})
+		err := db.Dao.CreateInBatches(stockUSBasics, 400).Error
+		if err != nil {
+			logger.SugaredLogger.Errorf("保存StockInfoUS股票基础信息失败:%s", err.Error())
+		}
+	} else {
+		logger.SugaredLogger.Warn("获取美股基础信息为空，跳过更新以防止清空数据库")
 	}
-	//for _, stock := range *stockUSBasics {
-	//	stockInfo := &models.StockInfoUS{
-	//		Code:   stock.Code,
-	//		Name:   stock.Name,
-	//		BKName: stock.BKName,
-	//		BKCode: stock.BKCode,
-	//	}
-	//	db.Dao.Model(&models.StockInfoUS{}).Where("code = ?", stock.Code).First(stockInfo)
-	//	if stockInfo.ID == 0 {
-	//		db.Dao.Model(&models.StockInfoUS{}).Create(stockInfo)
-	//	} else {
-	//		db.Dao.Model(&models.StockInfoUS{}).Where("code = ?", stock.Code).Updates(stockInfo)
-	//	}
-	//}
-
 }
 func (a *App) NewsPush(news *[]models.Telegraph) {
 
@@ -1133,21 +1109,19 @@ func IsHKTradingTime(date time.Time) bool {
 
 	hour, minute, _ := date.Clock()
 
-	if (hour == 9 && minute >= 0) || (hour == 9 && minute <= 30) {
+	// 上午局： 9:00 - 12:00
+	if hour == 9 || hour == 10 || hour == 11 {
 		return true
 	}
 
-	if (hour == 9 && minute > 30) || (hour >= 10 && hour < 12) || (hour == 12 && minute == 0) {
+	// 下午局： 13:00 - 16:10
+	if hour == 13 || hour == 14 || hour == 15 {
+		return true
+	}
+	if hour == 16 && minute <= 10 {
 		return true
 	}
 
-	if (hour == 13 && minute >= 0) || (hour >= 14 && hour < 16) || (hour == 16 && minute == 0) {
-		return true
-	}
-
-	if (hour == 16 && minute >= 0) || (hour == 16 && minute <= 10) {
-		return true
-	}
 	return false
 }
 

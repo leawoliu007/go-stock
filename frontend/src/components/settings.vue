@@ -87,6 +87,7 @@ const updateChannelOptions = [
   { label: 'Release（稳定版）', value: 'release' },
   { label: 'Pre-release（预发布版）', value: 'pre' },
   { label: 'Dev（开发版）', value: 'dev' },
+  { label: '关闭（不检查更新）', value: 'none' },
 ]
 
 async function fetchAiModels(aiConfig) {
@@ -474,7 +475,8 @@ function deletePrompt(ID) {
                     更新通道说明：<br>
                     <b>Release（稳定版）</b>：仅接收正式发布版本，稳定性最高<br>
                     <b>Pre-release（预发布版）</b>：包含预发布版本，可提前体验新功能<br>
-                    <b>Dev（开发版）</b>：包含所有可用版本，获取最新开发进度
+                    <b>Dev（开发版）</b>：包含所有可用版本，获取最新开发进度<br>
+                    <b>关闭（不检查更新）</b>：禁用自动版本检查，不会提示任何新版本
                   </div>
                   </n-gradient-text>
                 </template>

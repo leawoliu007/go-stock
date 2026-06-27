@@ -228,16 +228,23 @@ func eastMoneyCookiesViaChromedpOnce(browserPath string, timeout time.Duration, 
 	defer cancelCtx()
 
 	var cookies []*network.Cookie
-	err = chromedp.Run(ctx,
-		chromedp.ActionFunc(func(actx context.Context) error {
-			return network.Enable().Do(actx)
-		}),
-		chromedp.Navigate(quoteEastMoneyPage),
-		chromedp.WaitReady("body", chromedp.ByQuery),
-		chromedp.Sleep(1000*time.Millisecond),
+	var actions []chromedp.Action
+	actions = append(actions, chromedp.ActionFunc(func(actx context.Context) error {
+		return network.Enable().Do(actx)
+	}))
+
+	if pageURL != quoteEastMoneyPage && !strings.HasPrefix(pageURL, quoteEastMoneyPage) {
+		actions = append(actions,
+			chromedp.Navigate(quoteEastMoneyPage),
+			chromedp.WaitReady("body", chromedp.ByQuery),
+			chromedp.Sleep(500*time.Millisecond),
+		)
+	}
+
+	actions = append(actions,
 		chromedp.Navigate(pageURL),
 		chromedp.WaitReady("body", chromedp.ByQuery),
-		chromedp.Sleep(1000*time.Millisecond),
+		chromedp.Sleep(500*time.Millisecond),
 		chromedp.ActionFunc(func(actx context.Context) error {
 			var inner error
 			cookies, inner = network.GetCookies().WithURLs([]string{
@@ -246,6 +253,8 @@ func eastMoneyCookiesViaChromedpOnce(browserPath string, timeout time.Duration, 
 			return inner
 		}),
 	)
+
+	err = chromedp.Run(ctx, actions...)
 	if err != nil {
 		return "", err
 	}

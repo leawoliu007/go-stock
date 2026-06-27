@@ -38,6 +38,7 @@ import HotTopics from "./HotTopics.vue";
 import InvestCalendarTimeLine from "./InvestCalendarTimeLine.vue";
 import ClsCalendarTimeLine from "./ClsCalendarTimeLine.vue";
 import Stockhotmap from "./stockhotmap.vue";
+import CapitalHeatmap from "./CapitalHeatmap.vue";
 
 const route = useRoute()
 const icon = ref('https://raw.githubusercontent.com/ArvinLovegood/go-stock/master/build/appicon.png');
@@ -743,6 +744,9 @@ function ReFlesh(source) {
             <ClsCalendarTimeLine />
           </n-tab-pane>
         </n-tabs>
+      </n-tab-pane>
+      <n-tab-pane name="资金热力图" tab="资金热力图">
+        <CapitalHeatmap :dark-theme="darkTheme" :height="panelHeight" />
       </n-tab-pane>
       <n-tab-pane name="名站优选" tab="名站优选">
         <Stockhotmap />

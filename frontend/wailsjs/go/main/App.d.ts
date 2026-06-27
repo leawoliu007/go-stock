@@ -196,6 +196,10 @@ export function GetPromptTemplates(arg1:string,arg2:string):Promise<any>;
 
 export function GetRecentDaysMarketStatistic(arg1:number):Promise<Array<models.MarketStatistic>>;
 
+export function GetSectorMoneyFlow():Promise<Record<string, any>>;
+
+export function GetSectorTopStocks(arg1:string,arg2:number):Promise<Record<string, any>>;
+
 export function GetSkillByID(arg1:number):Promise<models.Skill>;
 
 export function GetSkillList(arg1:models.SkillQuery):Promise<models.SkillPageResp>;

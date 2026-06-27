@@ -407,6 +407,28 @@ const menuOptions = ref([
                   to: {
                     name: 'market',
                     query: {
+                      name: "资金热力图",
+                    }
+                  },
+                  onClick: () => {
+                    activeKey.value = 'market'
+                    EventsEmit("changeMarketTab", {ID: 0, name: '资金热力图'})
+                  },
+                },
+                {default: () => '资金热力图',}
+            ),
+        key: 'market12',
+        icon: renderIcon(StatsChartOutline),
+      },
+      {
+        label: () =>
+            h(
+                RouterLink,
+                {
+                  href: '#',
+                  to: {
+                    name: 'market',
+                    query: {
                       name: "名站优选",
                     }
                   },

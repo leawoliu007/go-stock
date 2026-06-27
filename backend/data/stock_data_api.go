@@ -1639,7 +1639,12 @@ func (receiver StockDataApi) getDCStockInfo(market string, page, pageSize int) {
 	url := "https://push2.eastmoney.com/api/qt/clist/get?np=1&fltt=1&invt=2&cb=data&fs=%s&fields=f12,f13,f14,f1,f2,f4,f3,f152,f5,f6,f7,f15,f18,f16,f17,f10,f8,f9,f23,f100,f265&fid=f3&pn=%d&pz=%d&po=1&dect=1&wbp2u=|0|0|0|web&_=%d"
 	sprintfUrl := fmt.Sprintf(url, fs, page, pageSize, time.Now().UnixMilli())
 	//logger.SugaredLogger.Infof("page:%d  url:%s", page, sprintfUrl)
-	resp, err := receiver.client.SetTimeout(time.Duration(receiver.config.CrawlTimeOut)*time.Second).R().
+	req := receiver.client.SetTimeout(time.Duration(receiver.config.CrawlTimeOut)*time.Second).R()
+	cookieHeader := EastMoneyCookieHeaderForPush2his(receiver.config)
+	if cookieHeader != "" {
+		req.SetHeader("Cookie", cookieHeader)
+	}
+	resp, err := req.
 		SetHeader("Host", "push2.eastmoney.com").
 		SetHeader("Referer", "https://quote.eastmoney.com/center/gridlist.html").
 		SetHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:146.0) Gecko/20100101 Firefox/146.0").
@@ -1978,12 +1983,11 @@ func (receiver StockDataApi) GetStockHistoryMoneyData(stockCode string) []models
 	//logger.SugaredLogger.Infof("url:%s", reqURL)
 	req := receiver.client.SetHeader("User-Agent", getRandomUA()).R()
 	setEastMoneyKlineBrowserHeaders(req, "https://quote.eastmoney.com")
-	// 使用缓存的 Cookie，pageURL 参数传空字符串由函数内部使用默认值
-	//cookieHeader, err := FetchEastMoneyCookiesViaChromedp("", time.Second*3, reqURL)
-	//if err == nil {
-	//	//logger.SugaredLogger.Infof("Cookie: %s", cookieHeader)
-	//	req.SetHeader("Cookie", cookieHeader)
-	//}
+	cookieHeader := EastMoneyCookieHeaderForPush2his(receiver.config)
+	if cookieHeader != "" {
+		req.SetHeader("Cookie", cookieHeader)
+	}
+
 
 	resp, err := req.Get(reqURL)
 	if err != nil {
@@ -2044,12 +2048,10 @@ func (receiver StockDataApi) GetStockMoneyData() models.StockMoneyDataResp {
 	req := receiver.client.SetTimeout(time.Duration(receiver.config.CrawlTimeOut) * time.Second).R()
 
 	setEastMoneyKlineBrowserHeaders(req, "https://quote.eastmoney.com")
-	// 使用缓存的 Cookie，pageURL 参数传空字符串由函数内部使用默认值
-	//cookieHeader, err := FetchEastMoneyCookiesViaChromedp("", time.Second*3, quoteEastMoneyPage)
-	//if err == nil {
-	//	//logger.SugaredLogger.Infof("Cookie: %s", cookieHeader)
-	//	req.SetHeader("Cookie", cookieHeader)
-	//}
+	cookieHeader := EastMoneyCookieHeaderForPush2his(receiver.config)
+	if cookieHeader != "" {
+		req.SetHeader("Cookie", cookieHeader)
+	}
 
 	resp, err := req.
 		SetHeader("Host", "push2.eastmoney.com").
@@ -3072,3 +3074,104 @@ func (receiver StockDataApi) CheckFrequentTrading(stockCode string) (bool, strin
 
 	return true, "可以交易"
 }
+
+// GetSectorMoneyFlow 获取板块资金流向数据
+func (receiver StockDataApi) GetSectorMoneyFlow() map[string]any {
+	url := fmt.Sprintf("https://push2.eastmoney.com/api/qt/clist/get?cb=data&pn=1&pz=100&po=1&np=1&fltt=2&invt=2&fid=f62&fs=m:90+t:2+f:!50&fields=f12,f14,f2,f3,f62,f20&wbp2u=|0|0|0|web&_=%d", time.Now().UnixMilli())
+	timeout := time.Duration(receiver.config.CrawlTimeOut) * time.Second
+	if timeout < 15*time.Second {
+		timeout = 15 * time.Second
+	}
+	req := receiver.client.SetTimeout(timeout).R()
+	setEastMoneyKlineBrowserHeaders(req, "https://quote.eastmoney.com/center/gridlist.html")
+	cookieHeader := EastMoneyCookieHeaderForPush2his(receiver.config)
+	if cookieHeader != "" {
+		req.SetHeader("Cookie", cookieHeader)
+	}
+
+	var resp *resty.Response
+	var err error
+	for i := 0; i < 3; i++ {
+		resp, err = req.
+			SetHeader("Host", "push2.eastmoney.com").
+			Get(url)
+		if err == nil && resp != nil && resp.StatusCode() == 200 {
+			break
+		}
+		var status int
+		if resp != nil {
+			status = resp.StatusCode()
+		}
+		logger.SugaredLogger.Warnf("GetSectorMoneyFlow attempt %d failed: err=%v status=%d", i+1, err, status)
+		time.Sleep(500 * time.Millisecond)
+	}
+	
+	if err != nil {
+		logger.SugaredLogger.Errorf("GetSectorMoneyFlow err:%s", err.Error())
+		return map[string]any{}
+	}
+	body := string(resp.Body())
+	vm := otto.New()
+	vm.Run("function data(res){return res};")
+	val, err := vm.Run(body)
+	if err != nil {
+		logger.SugaredLogger.Errorf("GetSectorMoneyFlow otto err:%s", err.Error())
+		return map[string]any{}
+	}
+	value, err := val.Export()
+	marshal, _ := json.Marshal(value)
+	var resData map[string]any
+	json.Unmarshal(marshal, &resData)
+	return resData
+}
+
+// GetSectorTopStocks 获取板块内资金流入最多的前N只股票
+func (receiver StockDataApi) GetSectorTopStocks(bkCode string, topN int) map[string]any {
+	url := fmt.Sprintf("https://push2.eastmoney.com/api/qt/clist/get?cb=data&pn=1&pz=%d&po=1&np=1&fltt=2&invt=2&fid=f62&fs=b:%s&fields=f12,f14,f2,f3,f62&wbp2u=|0|0|0|web&_=%d", topN, bkCode, time.Now().UnixMilli())
+	timeout := time.Duration(receiver.config.CrawlTimeOut) * time.Second
+	if timeout < 15*time.Second {
+		timeout = 15 * time.Second
+	}
+	req := receiver.client.SetTimeout(timeout).R()
+	setEastMoneyKlineBrowserHeaders(req, "https://quote.eastmoney.com/center/gridlist.html")
+	cookieHeader := EastMoneyCookieHeaderForPush2his(receiver.config)
+	if cookieHeader != "" {
+		req.SetHeader("Cookie", cookieHeader)
+	}
+
+	var resp *resty.Response
+	var err error
+	for i := 0; i < 3; i++ {
+		resp, err = req.
+			SetHeader("Host", "push2.eastmoney.com").
+			Get(url)
+		if err == nil && resp != nil && resp.StatusCode() == 200 {
+			break
+		}
+		var status int
+		if resp != nil {
+			status = resp.StatusCode()
+		}
+		logger.SugaredLogger.Warnf("GetSectorTopStocks attempt %d failed: err=%v status=%d", i+1, err, status)
+		time.Sleep(500 * time.Millisecond)
+	}
+
+	if err != nil {
+		logger.SugaredLogger.Errorf("GetSectorTopStocks err:%s", err.Error())
+		return map[string]any{}
+	}
+	body := string(resp.Body())
+	vm := otto.New()
+	vm.Run("function data(res){return res};")
+	val, err := vm.Run(body)
+	if err != nil {
+		logger.SugaredLogger.Errorf("GetSectorTopStocks otto err:%s", err.Error())
+		return map[string]any{}
+	}
+	value, err := val.Export()
+	marshal, _ := json.Marshal(value)
+	var resData map[string]any
+	json.Unmarshal(marshal, &resData)
+	return resData
+}
+

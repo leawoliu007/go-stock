@@ -479,3 +479,12 @@ func (a *App) GetStockRealTimePrice(stockCode string) map[string]any {
 		"name":    stock.Name,
 	}
 }
+
+func (a *App) GetSectorMoneyFlow() map[string]any {
+	return data.NewStockDataApi().GetSectorMoneyFlow()
+}
+
+func (a *App) GetSectorTopStocks(bkCode string, topN int) map[string]any {
+	return data.NewStockDataApi().GetSectorTopStocks(bkCode, topN)
+}
+

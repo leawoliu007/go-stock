@@ -15,21 +15,15 @@ import (
 	"github.com/duke-git/lancet/v2/convertor"
 	"github.com/duke-git/lancet/v2/validator"
 	"github.com/go-resty/resty/v2"
-	uaFake "github.com/lib4u/fake-useragent"
 )
 
 // 模拟 Windows 上 Chrome 从 quote.eastmoney.com 请求 push2his 行情接口（与 DevTools Network 常见字段对齐）。
 // 不显式设置 Accept-Encoding：由 net/http 默认协商 gzip 并自动解压；若声明 br/zstd 而 Transport 不解压会导致乱码/失败。
 // getRandomUA 随机返回一个 User-Agent（使用 fake-useragent 库）
+var stableUA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+
 func getRandomUA() string {
-	ua, _ := uaFake.New()
-	if ua != nil {
-		randomUA := ua.Filter().Platform("desktop").Get()
-		//logger.SugaredLogger.Infof("User-Agent: %s", randomUA)
-		return randomUA
-	}
-	// 如果库获取失败，返回备用 UA
-	return "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+	return stableUA
 }
 
 // Enhanced headers with more realistic browser characteristics
@@ -46,15 +40,10 @@ func setEastMoneyKlineBrowserHeaders(r *resty.Request, referer string) {
 func (receiver *EastMoneyKLineApi) fetchKLineJSONBytesByHTTP(reqURL string) ([]byte, error) {
 	req := receiver.client.SetTimeout(time.Duration(receiver.config.CrawlTimeOut) * time.Second).R()
 	setEastMoneyKlineBrowserHeaders(req, "https://quote.eastmoney.com")
-	// 使用缓存的 Cookie，pageURL 参数传空字符串由函数内部使用默认值
-	//cookieHeader, err := FetchEastMoneyCookiesViaChromedp("", time.Second*5, reqURL)
-	//if err != nil {
-	//	logger.SugaredLogger.Errorf("FetchEastMoneyCookiesViaChromedp error: %v", err)
-	//}
-	//if err == nil {
-	//	//logger.SugaredLogger.Infof("Cookie: %s", cookieHeader)
-	//	req.SetHeader("Cookie", cookieHeader)
-	//}
+	cookieHeader := EastMoneyCookieHeaderForPush2his(receiver.config)
+	if cookieHeader != "" {
+		req.SetHeader("Cookie", cookieHeader)
+	}
 
 	resp, err := req.Get(reqURL)
 	if err != nil {

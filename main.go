@@ -277,7 +277,6 @@ func AutoMigrate() {
 	db.Dao.AutoMigrate(&models.StockInfoHK{})
 	db.Dao.AutoMigrate(&models.StockInfoUS{})
 	db.Dao.AutoMigrate(&data.FollowedFund{})
-	db.Dao.AutoMigrate(&data.FollowedStock{})
 	db.Dao.AutoMigrate(&data.FundBasic{})
 	db.Dao.AutoMigrate(&models.PromptTemplate{})
 	db.Dao.AutoMigrate(&data.Group{})
@@ -346,14 +345,21 @@ func initStockDataUS(ctx context.Context) {
 	var total int64
 	db.Dao.Model(&models.StockInfoUS{}).Count(&total)
 	if total != int64(len(v)) {
+		// 批量查询已存在的 code，避免 N+1 查询
+		var existCodes []string
+		db.Dao.Model(&models.StockInfoUS{}).Pluck("code", &existCodes)
+		existCodeMap := make(map[string]struct{}, len(existCodes))
+		for _, c := range existCodes {
+			existCodeMap[c] = struct{}{}
+		}
+		var toCreate []models.StockInfoUS
 		for _, item := range v {
-			var count int64
-			db.Dao.Model(&models.StockInfoUS{}).Where("code = ?", item.Code).Count(&count)
-			if count > 0 {
-				//log.SugaredLogger.Infof("stock data us %s exist", item.Code)
-				continue
+			if _, exists := existCodeMap[item.Code]; !exists {
+				toCreate = append(toCreate, item)
 			}
-			db.Dao.Model(&models.StockInfoUS{}).Create(&item)
+		}
+		if len(toCreate) > 0 {
+			db.Dao.CreateInBatches(&toCreate, 500)
 		}
 	}
 }
@@ -372,17 +378,23 @@ func initStockDataHK(ctx context.Context) {
 	var total int64
 	db.Dao.Model(&models.StockInfoHK{}).Count(&total)
 	if total != int64(len(v)) {
+		// 批量查询已存在的 code，避免 N+1 查询
+		var existCodes []string
+		db.Dao.Model(&models.StockInfoHK{}).Pluck("code", &existCodes)
+		existCodeMap := make(map[string]struct{}, len(existCodes))
+		for _, c := range existCodes {
+			existCodeMap[c] = struct{}{}
+		}
+		var toCreate []models.StockInfoHK
 		for _, item := range v {
-			var count int64
-			db.Dao.Model(&models.StockInfoHK{}).Where("code = ?", item.Code).Count(&count)
-			if count > 0 {
-				//log.SugaredLogger.Infof("stock data hk %s exist", item.Code)
-				continue
+			if _, exists := existCodeMap[item.Code]; !exists {
+				toCreate = append(toCreate, item)
 			}
-			db.Dao.Model(&models.StockInfoHK{}).Create(&item)
+		}
+		if len(toCreate) > 0 {
+			db.Dao.CreateInBatches(&toCreate, 500)
 		}
 	}
-
 }
 
 func updateBasicInfo() {
@@ -468,11 +480,14 @@ func initStockData(ctx context.Context) {
 func checkDir(dir string) {
 	_, err := os.Stat(dir)
 	if os.IsNotExist(err) {
-		os.Mkdir(dir, os.ModePerm)
-		log.SugaredLogger.Info("create dir: " + dir)
+		if mkErr := os.Mkdir(dir, os.ModePerm); mkErr != nil {
+			log.SugaredLogger.Errorf("创建目录 %s 失败: %v", dir, mkErr)
+		} else {
+			log.SugaredLogger.Info("create dir: " + dir)
+		}
 	}
 	if BuildKey == "" {
-		BuildKey = "cc1e0d684e32f176c56ff1fcf384dcd9"
+		log.SugaredLogger.Warn("BuildKey 未通过编译参数注入，赞助码相关功能将不可用")
 	}
 }
 

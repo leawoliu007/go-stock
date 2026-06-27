@@ -382,6 +382,14 @@ export function GetRecentDaysMarketStatistic(arg1) {
   return window['go']['main']['App']['GetRecentDaysMarketStatistic'](arg1);
 }
 
+export function GetSectorMoneyFlow() {
+  return window['go']['main']['App']['GetSectorMoneyFlow']();
+}
+
+export function GetSectorTopStocks(arg1, arg2) {
+  return window['go']['main']['App']['GetSectorTopStocks'](arg1, arg2);
+}
+
 export function GetSkillByID(arg1) {
   return window['go']['main']['App']['GetSkillByID'](arg1);
 }
